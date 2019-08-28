@@ -32,6 +32,16 @@
 
 #define BUF_SIZE (1024)
 
+
+
+#define LEFT_FRONT 27
+#define RIGHT_FRONT 26
+#define LEFT_BACK 25
+#define RIGHT_BACK 33
+#define DELAY_ON 1000
+
+
+
 static void echo_task()
 {
     /* Configure parameters of an UART driver,
@@ -49,90 +59,72 @@ static void echo_task()
 
     // Configure a temporary buffer for the incoming data
     uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
+    
+
+    gpio_pad_select_gpio(LEFT_FRONT);
+    gpio_set_direction(LEFT_FRONT, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(RIGHT_FRONT);
+    gpio_set_direction(RIGHT_FRONT, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(LEFT_BACK);
+    gpio_set_direction(LEFT_BACK, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(RIGHT_BACK);
+    gpio_set_direction(RIGHT_BACK, GPIO_MODE_OUTPUT);
 
     while (1) {
         // Read data from the UART
         int len = uart_read_bytes(UART_NUM_1, data, BUF_SIZE, 20 / portTICK_RATE_MS);
         // Write data back to the UART
         uart_write_bytes(UART_NUM_1, (const char *) data, len);
-    }
 
+        if (len > 0){
+            int i = 0;
 
-    // #define LEFT_FRONT 27
-    // #define RIGHT_FRONT 26
-    // #define LEFT_BACK 25
-    // #define RIGHT_BACK 33
-    // #define DELAY_OFF 1000
-    // #define DELAY_ON 500
+            printf("Chegou!\n");
 
-    // gpio_pad_select_gpio(LEFT_FRONT);
-    // gpio_set_direction(LEFT_FRONT, GPIO_MODE_OUTPUT);
-    // gpio_pad_select_gpio(RIGHT_FRONT);
-    // gpio_set_direction(RIGHT_FRONT, GPIO_MODE_OUTPUT);
-    // gpio_pad_select_gpio(LEFT_BACK);
-    // gpio_set_direction(LEFT_BACK, GPIO_MODE_OUTPUT);
-    // gpio_pad_select_gpio(RIGHT_BACK);
-    // gpio_set_direction(RIGHT_BACK, GPIO_MODE_OUTPUT);
+            char* bt_data = 0;
+            bt_data = (char*)malloc(len);
+            memcpy(bt_data,data,len);
+            bt_data[len-1] = '\0'; 
+            printf("%s\n", bt_data);
 
-    // while (1) {
-    //     // Read data from the UART
-    //     int len = uart_read_bytes(UART_NUM_1, data, BUF_SIZE, 20 / portTICK_RATE_MS);
-    //     // Write data back to the UART
-    //     uart_write_bytes(UART_NUM_1, (const char *) data, len);
+            char bt_data_char = (char) bt_data[0];
 
-    //     if (len > 0){
-    //         int i = 0;
-
-    //         printf("Chegou!\n");
-
-    //         char* bt_data = 0;
-    //         bt_data = (char*)malloc(len);
-    //         memcpy(bt_data,data,len);
-    //         bt_data[len-1] = '\0'; 
-    //         printf("%s\n", bt_data);
-
-    //         char bt_data_char = (char) bt_data[0];
-
-    //         if (bt_data_char == '3'){
-    //             printf("LEFT!\n");
-    //             gpio_set_level(LEFT_BACK, 1);
-    //             gpio_set_level(RIGHT_FRONT, 1);
-    //             vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-    //             gpio_set_level(LEFT_BACK, 0);
-    //             gpio_set_level(RIGHT_FRONT, 0);
-    //             vTaskDelay(DELAY_OFF / portTICK_PERIOD_MS);
-    //         }
-    //         else if (bt_data_char == '4'){
-    //             printf("RIGHT!\n");
-    //             gpio_set_level(RIGHT_BACK, 1);
-    //             gpio_set_level(LEFT_FRONT, 1);
-    //             vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-    //             gpio_set_level(RIGHT_BACK, 0);
-    //             gpio_set_level(LEFT_FRONT, 0);
-    //             vTaskDelay(DELAY_OFF / portTICK_PERIOD_MS);
-    //         }
-    //         else if (bt_data_char == '1'){
-    //             printf("STRAIGHT!\n");
-    //             gpio_set_level(LEFT_FRONT, 1);
-    //             gpio_set_level(RIGHT_FRONT, 1);
-    //             vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-    //             gpio_set_level(LEFT_FRONT, 0);
-    //             gpio_set_level(RIGHT_FRONT, 0);
-    //             vTaskDelay(DELAY_OFF / portTICK_PERIOD_MS);
-    //         }
-    //         else if (bt_data_char == '2'){
-    //             printf("BACK!\n");
-    //             gpio_set_level(LEFT_BACK, 1);
-    //             gpio_set_level(RIGHT_BACK, 1);
-    //             vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-    //             gpio_set_level(LEFT_BACK, 0);
-    //             gpio_set_level(RIGHT_BACK, 0);
-    //             vTaskDelay(DELAY_OFF / portTICK_PERIOD_MS);
-    //         }
+            if (bt_data_char == '3'){
+                printf("LEFT!\n");
+                gpio_set_level(LEFT_BACK, 1);
+                gpio_set_level(RIGHT_FRONT, 1);
+                vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+                gpio_set_level(LEFT_BACK, 0);
+                gpio_set_level(RIGHT_FRONT, 0);
+            }
+            else if (bt_data_char == '4'){
+                printf("RIGHT!\n");
+                gpio_set_level(RIGHT_BACK, 1);
+                gpio_set_level(LEFT_FRONT, 1);
+                vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+                gpio_set_level(RIGHT_BACK, 0);
+                gpio_set_level(LEFT_FRONT, 0);
+            }
+            else if (bt_data_char == '1'){
+                printf("STRAIGHT!\n");
+                gpio_set_level(LEFT_FRONT, 1);
+                gpio_set_level(RIGHT_FRONT, 1);
+                vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+                gpio_set_level(LEFT_FRONT, 0);
+                gpio_set_level(RIGHT_FRONT, 0);
+            }
+            else if (bt_data_char == '2'){
+                printf("BACK!\n");
+                gpio_set_level(LEFT_BACK, 1);
+                gpio_set_level(RIGHT_BACK, 1);
+                vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+                gpio_set_level(LEFT_BACK, 0);
+                gpio_set_level(RIGHT_BACK, 0);
+            }
             
-    //         printf("-------------------\n");
-    //     }
-    // }
+            printf("-------------------\n");
+        }
+    }
 }
 
 void blink_task(void *pvParameter)
