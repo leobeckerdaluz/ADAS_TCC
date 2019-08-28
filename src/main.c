@@ -11,6 +11,8 @@
 #include "freertos/task.h"
 #include "driver/uart.h"
 
+#include "driver/gpio.h"
+
 #include <string.h>
 
 /**
@@ -33,13 +35,11 @@
 #define BUF_SIZE (1024)
 
 
-
-#define LEFT_FRONT 27
-#define RIGHT_FRONT 26
-#define LEFT_BACK 25
-#define RIGHT_BACK 33
+#define LEFT_FRONT GPIO_NUM_13
+#define RIGHT_FRONT GPIO_NUM_12
+#define LEFT_BACK GPIO_NUM_14
+#define RIGHT_BACK GPIO_NUM_27
 #define DELAY_ON 1000
-
 
 
 static void echo_task()
@@ -70,6 +70,43 @@ static void echo_task()
     gpio_pad_select_gpio(RIGHT_BACK);
     gpio_set_direction(RIGHT_BACK, GPIO_MODE_OUTPUT);
 
+    // printf("Começando loop!\n");
+    // for (int i=0; i<4; i++)
+    // {
+    //     printf("LEFT_BACK!\n");
+    //     gpio_set_level(LEFT_BACK, 1);
+    //     gpio_set_level(LEFT_FRONT, 0);
+    //     gpio_set_level(RIGHT_BACK, 0);
+    //     gpio_set_level(RIGHT_FRONT, 0);
+    //     vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+
+    //     printf("LEFT_FRONT!\n");
+    //     gpio_set_level(LEFT_BACK, 0);
+    //     gpio_set_level(LEFT_FRONT, 1);
+    //     gpio_set_level(RIGHT_BACK, 0);
+    //     gpio_set_level(RIGHT_FRONT, 0);
+    //     vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+
+    //     printf("RIGHT_BACK!\n");
+    //     gpio_set_level(LEFT_BACK, 0);
+    //     gpio_set_level(LEFT_FRONT, 0);
+    //     gpio_set_level(RIGHT_BACK, 1);
+    //     gpio_set_level(RIGHT_FRONT, 0);
+    //     vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+
+    //     printf("RIGHT_FRONT!\n");
+    //     gpio_set_level(LEFT_BACK, 0);
+    //     gpio_set_level(LEFT_FRONT, 0);
+    //     gpio_set_level(RIGHT_BACK, 0);
+    //     gpio_set_level(RIGHT_FRONT, 1);
+    //     vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+    // }
+    // gpio_set_level(LEFT_BACK, 0);
+    // gpio_set_level(LEFT_FRONT, 0);
+    // gpio_set_level(RIGHT_BACK, 0);
+    // gpio_set_level(RIGHT_FRONT, 0);
+    // printf("Acabou o loop!\n");
+    
     while (1) {
         // Read data from the UART
         int len = uart_read_bytes(UART_NUM_1, data, BUF_SIZE, 20 / portTICK_RATE_MS);
@@ -77,8 +114,6 @@ static void echo_task()
         uart_write_bytes(UART_NUM_1, (const char *) data, len);
 
         if (len > 0){
-            int i = 0;
-
             printf("Chegou!\n");
 
             char* bt_data = 0;
@@ -153,6 +188,6 @@ void blink_task(void *pvParameter)
 
 void app_main()
 {
-    // xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
+    xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
     xTaskCreate(echo_task, "uart_echo_task", 1024, NULL, 10, NULL);
 }
