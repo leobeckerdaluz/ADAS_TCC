@@ -4,14 +4,24 @@ import time
  
 #GPIO Mode (BOARD / BCM)
 GPIO.setmode(GPIO.BCM)
- 
+
+# Constants
+AUTOBRAKE_DIST = 7.0 #cm
+COLLISION_DIST = 15.0 #cm
+VERIFY_INTERVAL = 0.1 #s
+
 #set GPIO Pins
 GPIO_TRIGGER = 18
 GPIO_ECHO = 16
+
+GPIO_COLLISION = 23
+GPIO_AUTOBRAKE = 24
  
 #set GPIO direction (IN / OUT)
 GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
 GPIO.setup(GPIO_ECHO, GPIO.IN)
+GPIO.setup(GPIO_COLLISION, GPIO.OUT)
+GPIO.setup(GPIO_AUTOBRAKE, GPIO.OUT)
  
 def distance():
     # set Trigger to HIGH
@@ -44,8 +54,19 @@ if __name__ == '__main__':
     try:
         while True:
             dist = distance()
+
+            if(dist < AUTOBRAKE_DIST):
+                GPIO.output(GPIO_AUTOBRAKE, True)
+                GPIO.output(GPIO_COLLISION, True)
+            elif (dist < COLLISION_DIST):
+                GPIO.output(GPIO_AUTOBRAKE, False)
+                GPIO.output(GPIO_COLLISION, True)
+            else:
+                GPIO.output(GPIO_AUTOBRAKE, False)
+                GPIO.output(GPIO_COLLISION, False)
+
             print ("Measured Distance = %.1f cm" % dist)
-            time.sleep(1)
+            time.sleep(VERIFY_INTERVAL)
  
         # Reset by pressing CTRL + C
     except KeyboardInterrupt:

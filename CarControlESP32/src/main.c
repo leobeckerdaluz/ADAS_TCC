@@ -13,7 +13,11 @@
 
 #include "driver/gpio.h"
 
+#include <stdint.h>
+
 #include <string.h>
+
+#include "definitions.h"
 
 /**
  * This is an example which echos any data it receives on UART1 back to the sender,
@@ -34,13 +38,60 @@
 
 #define BUF_SIZE (1024)
 
-
-#define LEFT_FRONT GPIO_NUM_13
-#define RIGHT_FRONT GPIO_NUM_12
-#define LEFT_BACK GPIO_NUM_14
-#define RIGHT_BACK GPIO_NUM_27
+#define BLINK_GPIO 2
+#define BLINK_DELAY 300
 #define DELAY_ON 1000
 
+#define GPIO_RASP_COLLISION GPIO_NUM_35
+#define GPIO_RASP_AUTOBRAKE GPIO_NUM_34
+
+static void ultrassonico_test()
+{
+    while (1) {
+        if (gpio_get_level(GPIO_RASP_COLLISION)){
+            printf("COLLISION!\n");
+            
+            go_left();
+        }
+        else if (gpio_get_level(GPIO_RASP_AUTOBRAKE)){
+            printf("AUTOBRAKE!\n");
+
+            stop();
+        }
+        else{
+            printf("SEGUE!\n");
+
+            go_straight();
+        }     
+    }
+}
+
+
+static void each_full_power()
+{
+    while (1) {
+        printf("Começando loop!\n");
+        for (int i=0; i<4; i++)
+        {
+            printf("GO STRAIGHT!\n");
+            go_straight();
+            vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+
+            printf("GO LEFT!\n");
+            go_left();
+            vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+
+            printf("GO BACK!\n");
+            go_back();
+            vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+
+            printf("GO RIGHT!\n");
+            go_right();
+            vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
+        }
+        printf("Acabou o loop!\n");
+    }
+}
 
 static void echo_task()
 {
@@ -59,53 +110,6 @@ static void echo_task()
 
     // Configure a temporary buffer for the incoming data
     uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
-    
-
-    gpio_pad_select_gpio(LEFT_FRONT);
-    gpio_set_direction(LEFT_FRONT, GPIO_MODE_OUTPUT);
-    gpio_pad_select_gpio(RIGHT_FRONT);
-    gpio_set_direction(RIGHT_FRONT, GPIO_MODE_OUTPUT);
-    gpio_pad_select_gpio(LEFT_BACK);
-    gpio_set_direction(LEFT_BACK, GPIO_MODE_OUTPUT);
-    gpio_pad_select_gpio(RIGHT_BACK);
-    gpio_set_direction(RIGHT_BACK, GPIO_MODE_OUTPUT);
-
-    // printf("Começando loop!\n");
-    // for (int i=0; i<4; i++)
-    // {
-    //     printf("LEFT_BACK!\n");
-    //     gpio_set_level(LEFT_BACK, 1);
-    //     gpio_set_level(LEFT_FRONT, 0);
-    //     gpio_set_level(RIGHT_BACK, 0);
-    //     gpio_set_level(RIGHT_FRONT, 0);
-    //     vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-
-    //     printf("LEFT_FRONT!\n");
-    //     gpio_set_level(LEFT_BACK, 0);
-    //     gpio_set_level(LEFT_FRONT, 1);
-    //     gpio_set_level(RIGHT_BACK, 0);
-    //     gpio_set_level(RIGHT_FRONT, 0);
-    //     vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-
-    //     printf("RIGHT_BACK!\n");
-    //     gpio_set_level(LEFT_BACK, 0);
-    //     gpio_set_level(LEFT_FRONT, 0);
-    //     gpio_set_level(RIGHT_BACK, 1);
-    //     gpio_set_level(RIGHT_FRONT, 0);
-    //     vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-
-    //     printf("RIGHT_FRONT!\n");
-    //     gpio_set_level(LEFT_BACK, 0);
-    //     gpio_set_level(LEFT_FRONT, 0);
-    //     gpio_set_level(RIGHT_BACK, 0);
-    //     gpio_set_level(RIGHT_FRONT, 1);
-    //     vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-    // }
-    // gpio_set_level(LEFT_BACK, 0);
-    // gpio_set_level(LEFT_FRONT, 0);
-    // gpio_set_level(RIGHT_BACK, 0);
-    // gpio_set_level(RIGHT_FRONT, 0);
-    // printf("Acabou o loop!\n");
     
     while (1) {
         // Read data from the UART
@@ -126,35 +130,27 @@ static void echo_task()
 
             if (bt_data_char == '3'){
                 printf("LEFT!\n");
-                gpio_set_level(LEFT_BACK, 1);
-                gpio_set_level(RIGHT_FRONT, 1);
+                go_left();
                 vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-                gpio_set_level(LEFT_BACK, 0);
-                gpio_set_level(RIGHT_FRONT, 0);
+                stop();
             }
             else if (bt_data_char == '4'){
                 printf("RIGHT!\n");
-                gpio_set_level(RIGHT_BACK, 1);
-                gpio_set_level(LEFT_FRONT, 1);
+                go_right();
                 vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-                gpio_set_level(RIGHT_BACK, 0);
-                gpio_set_level(LEFT_FRONT, 0);
+                stop();
             }
             else if (bt_data_char == '1'){
                 printf("STRAIGHT!\n");
-                gpio_set_level(LEFT_FRONT, 1);
-                gpio_set_level(RIGHT_FRONT, 1);
+                go_straight();
                 vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-                gpio_set_level(LEFT_FRONT, 0);
-                gpio_set_level(RIGHT_FRONT, 0);
+                stop();
             }
             else if (bt_data_char == '2'){
                 printf("BACK!\n");
-                gpio_set_level(LEFT_BACK, 1);
-                gpio_set_level(RIGHT_BACK, 1);
+                go_back();
                 vTaskDelay(DELAY_ON / portTICK_PERIOD_MS);
-                gpio_set_level(LEFT_BACK, 0);
-                gpio_set_level(RIGHT_BACK, 0);
+                stop();
             }
             
             printf("-------------------\n");
@@ -164,18 +160,13 @@ static void echo_task()
 
 void blink_task(void *pvParameter)
 {
-    #define BLINK_GPIO 2
-    #define BLINK_DELAY 300
-
     /* Configure the IOMUX register for pad BLINK_GPIO (some pads are
        muxed to GPIO on reset already, but some default to other
        functions and need to be switched to GPIO. Consult the
        Technical Reference for a list of pads and their default
        functions.)
     */
-    gpio_pad_select_gpio(BLINK_GPIO);
-    /* Set the GPIO as a push/pull output */
-    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
+    
     while(1) {
         /* Blink off (output low) */
         gpio_set_level(BLINK_GPIO, 0);
@@ -188,6 +179,20 @@ void blink_task(void *pvParameter)
 
 void app_main()
 {
-    xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
-    xTaskCreate(echo_task, "uart_echo_task", 1024, NULL, 10, NULL);
+    // LED
+    gpio_pad_select_gpio(BLINK_GPIO);
+    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
+
+    // RASP
+    gpio_pad_select_gpio(GPIO_RASP_COLLISION);
+    gpio_set_direction(GPIO_RASP_COLLISION, GPIO_MODE_INPUT);
+    gpio_pad_select_gpio(GPIO_RASP_AUTOBRAKE);
+    gpio_set_direction(GPIO_RASP_AUTOBRAKE, GPIO_MODE_INPUT);
+
+    init_motor_pins();
+
+    // xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
+    // xTaskCreate(echo_task, "uart_echo_task", 1024, NULL, 10, NULL);
+    xTaskCreate(each_full_power, "motor_test", 1024, NULL, 6, NULL);
+    // xTaskCreate(ultrassonico_test, "rasp_integration", 1024, NULL, 6, NULL);
 }
