@@ -247,37 +247,74 @@
 #include "esp_err.h"
 
 void app_main()
-// esp_err_t app_main() 
 {
- 
     ledc_timer_config_t ledc_timer = {
-       .bit_num = LEDC_TIMER_8_BIT,
-        .freq_hz = 50,
-        .speed_mode = LEDC_HIGH_SPEED_MODE,
-        .timer_num = LEDC_TIMER_0
+        .duty_resolution = LEDC_TIMER_8_BIT, // resolution of PWM duty
+        .freq_hz = 5000,                      // frequency of PWM signal
+        .speed_mode = LEDC_HS_MODE,           // timer mode
+        .timer_num = LEDC_HS_TIMER,            // timer index
     };
+    // Set configuration of timer0 for high speed channels
     ledc_timer_config(&ledc_timer);
 
-    ledc_channel_config_t ledc_channel0 = {
-        .channel = LEDC_CHANNEL_0,
-        .duty = 0,
-        .gpio_num = LEDC_HS_CH0_GPIO,
-        .intr_type = LEDC_INTR_DISABLE,
-        .speed_mode = LEDC_HIGH_SPEED_MODE,
-        .timer_sel = LEDC_TIMER_0
+    // Prepare and set configuration of timer1 for low speed channels
+    ledc_timer.speed_mode = LEDC_LS_MODE;
+    ledc_timer.timer_num = LEDC_LS_TIMER;
+    ledc_timer_config(&ledc_timer);
+
+    /*
+     * Prepare individual configuration
+     * for each channel of LED Controller
+     * by selecting:
+     * 
+     * - output duty cycle, set initially to 0
+     * - GPIO number where LED is connected to
+     * - speed mode, either high or low
+     * - timer servicing selected channel
+     *   Note: if different channels use one timer,
+     *         then frequency and bit_num of these channels
+     *         will be the same
+     */
+    ledc_channel_config_t ledc_channel[LEDC_TEST_CH_NUM] = {
+        {
+            .channel    = LEDC_HS_CH0_CHANNEL,
+            .duty       = 0,
+            .gpio_num   = LEDC_HS_CH0_GPIO,
+            .speed_mode = LEDC_HS_MODE,
+            .hpoint     = 0,
+            .timer_sel  = LEDC_HS_TIMER
+        },
+        {
+            .channel    = LEDC_HS_CH1_CHANNEL,
+            .duty       = 0,
+            .gpio_num   = LEDC_HS_CH1_GPIO,
+            .speed_mode = LEDC_HS_MODE,
+            .hpoint     = 0,
+            .timer_sel  = LEDC_HS_TIMER
+        },
+        {
+            .channel    = LEDC_LS_CH2_CHANNEL,
+            .duty       = 0,
+            .gpio_num   = LEDC_LS_CH2_GPIO,
+            .speed_mode = LEDC_LS_MODE,
+            .hpoint     = 0,
+            .timer_sel  = LEDC_LS_TIMER
+        },
+        {
+            .channel    = LEDC_LS_CH3_CHANNEL,
+            .duty       = 0,
+            .gpio_num   = LEDC_LS_CH3_GPIO,
+            .speed_mode = LEDC_LS_MODE,
+            .hpoint     = 0,
+            .timer_sel  = LEDC_LS_TIMER
+        },
     };
 
-    ledc_channel_config_t ledc_channel1 = {
-        .channel = LEDC_CHANNEL_1,
-        .duty = 0,
-        .gpio_num = LEDC_HS_CH1_GPIO,
-        .intr_type = LEDC_INTR_DISABLE,
-        .speed_mode = LEDC_HIGH_SPEED_MODE,
-        .timer_sel = LEDC_TIMER_0
-    };
-    
-    ledc_channel_config(&ledc_channel0);
-    ledc_channel_config(&ledc_channel1);
+    // Set LED Controller with previously prepared configuration
+    int ch;
+    for (ch = 0; ch < LEDC_TEST_CH_NUM; ch++) {
+        ledc_channel_config(&ledc_channel[ch]);
+    }
 
     int up_or_down = 1;
     int dutyduty = 0;  
@@ -287,42 +324,20 @@ void app_main()
         else    dutyduty--;
             
         if(dutyduty >= resolution)   up_or_down = 0;
-        else if(dutyduty <= 0)  up_or_down = 1;
+        else if(dutyduty <= 20)  up_or_down = 1;
 
         ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, dutyduty);
         ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
 
         ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, resolution-dutyduty);
         ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
 
-        // ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 50);
-        // ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, dutyduty);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
 
-        // ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 100);
-        // ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        // ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 150);
-        // ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        // ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 200);
-        // ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        // ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 256);
-        // ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        // ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 270);
-        // ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        // ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0);
-        // ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-        // vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3, resolution-dutyduty);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3);
+        
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
 }
