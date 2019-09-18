@@ -16,13 +16,13 @@ GPIO_ECHO = 16
 
 GPIO_COLLISION = 23
 GPIO_AUTOBRAKE = 24
- 
+
 #set GPIO direction (IN / OUT)
 GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
 GPIO.setup(GPIO_ECHO, GPIO.IN)
 GPIO.setup(GPIO_COLLISION, GPIO.OUT)
 GPIO.setup(GPIO_AUTOBRAKE, GPIO.OUT)
- 
+
 def distance():
     # set Trigger to HIGH
     GPIO.output(GPIO_TRIGGER, True)
