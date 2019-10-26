@@ -37,5 +37,5 @@ void app_main()
     xTaskCreate(&joystick_bluetooth_TASK, "uart_bt_task", 2048, NULL, 10, NULL);
     xTaskCreate(&ADAS_listener_TASK, "rasp_integration", 1024, NULL, 2, NULL);
     xTaskCreate(&buzzer_TASK, "buzzer_control", 1024, NULL, 3, NULL);
-    xTaskCreate(&motor_control_TASK, "motor_control", 2048, NULL, 1, NULL);
+    // xTaskCreate(&motor_control_TASK, "motor_control", 2048, NULL, 1, NULL);
 }

@@ -36,10 +36,10 @@ void init_motor(){
     // Set configuration of timer0 for high speed channels
     ledc_timer_config(&ledc_timer);
 
-    // // Prepare and set configuration of timer1 for low speed channels
-    // ledc_timer.speed_mode = LEDC_LS_MODE;
-    // ledc_timer.timer_num = LEDC_LS_TIMER;
-    // ledc_timer_config(&ledc_timer);
+    // Prepare and set configuration of timer1 for low speed channels
+    ledc_timer.speed_mode = LEDC_LS_MODE;
+    ledc_timer.timer_num = LEDC_LS_TIMER;
+    ledc_timer_config(&ledc_timer);
 
     /*
      * Prepare individual configuration
@@ -71,27 +71,27 @@ void init_motor(){
             .hpoint     = 0,
             .timer_sel  = LEDC_HS_TIMER
         },
-        // {
-        //     .channel    = LEDC_LS_CH2_CHANNEL,
-        //     .duty       = 0,
-        //     .gpio_num   = LEDC_LS_CH2_GPIO,
-        //     .speed_mode = LEDC_LS_MODE,
-        //     .hpoint     = 0,
-        //     .timer_sel  = LEDC_LS_TIMER
-        // },
-        // {
-        //     .channel    = LEDC_LS_CH3_CHANNEL,
-        //     .duty       = 0,
-        //     .gpio_num   = LEDC_LS_CH3_GPIO,
-        //     .speed_mode = LEDC_LS_MODE,
-        //     .hpoint     = 0,
-        //     .timer_sel  = LEDC_LS_TIMER
-        // },
+        {
+            .channel    = LEDC_LS_CH2_CHANNEL,
+            .duty       = 0,
+            .gpio_num   = LEDC_LS_CH2_GPIO,
+            .speed_mode = LEDC_LS_MODE,
+            .hpoint     = 0,
+            .timer_sel  = LEDC_LS_TIMER
+        },
+        {
+            .channel    = LEDC_LS_CH3_CHANNEL,
+            .duty       = 0,
+            .gpio_num   = LEDC_LS_CH3_GPIO,
+            .speed_mode = LEDC_LS_MODE,
+            .hpoint     = 0,
+            .timer_sel  = LEDC_LS_TIMER
+        },
     };
 
     // Set LED Controller with previously prepared configuration
     int ch;
-    for (ch = 0; ch < 2; ch++) {
+    for (ch = 0; ch < LEDC_TEST_CH_NUM; ch++) {
         ledc_channel_config(&ledc_channel[ch]);
     }
 }
@@ -136,10 +136,17 @@ void init_motor(){
 
 
 void go_straight_pwm(uint8_t duty){
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, duty);
-    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, duty);
-    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1);
+    ledc_set_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT, duty);
+    ledc_update_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT);
+    
+    ledc_set_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT, duty);
+    ledc_update_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT);
+    
+    ledc_set_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK, 0);
+    ledc_update_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK);
+    
+    ledc_set_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK, 0);
+    ledc_update_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK);
 }
 // void go_left_pwm(uint8_t duty){
 //     ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, duty);
@@ -154,25 +161,114 @@ void go_straight_pwm(uint8_t duty){
 //     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3);
 // }
 void stop_pwm(){
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0);
-    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-    ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, 0);
-    ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1);
-    // ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, 0);
-    // ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
-    // ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3, 0);
-    // ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3);
+    ledc_set_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT, 0);
+    ledc_update_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT);
+    
+    ledc_set_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT, 0);
+    ledc_update_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT);
+    
+    ledc_set_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK, 0);
+    ledc_update_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK);
+    
+    ledc_set_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK, 0);
+    ledc_update_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK);
 }
 
 void set_all_duty(){
-    if(y_axis==0)   stop_pwm();
-    else{
-        uint8_t duty = (abs(y_axis)*2) + 40;
+    if ( abs(y_axis)<10 || abs(x_axis)<10 )
+        stop_pwm();
+    else {
+        printf("Andando!\n");
+
+        uint8_t duty_x = (abs(x_axis)*2) + 40;
+        uint8_t duty_y = (abs(y_axis)*2) + 40;
+
+        float gain = y_axis;
+        uint8_t left  = -10;
+        uint8_t right =  10;
+
+        if (x_axis>0 && y_axis>0){
+            ledc_set_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT, 0);
+            ledc_update_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT);
+            
+            ledc_set_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT, 0);
+            ledc_update_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT);
+            
+            ledc_set_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK, 0);
+            ledc_update_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK);
+            
+            ledc_set_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK, 0);
+            ledc_update_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK);
+        }
+        else if (x_axis>0 && y_axis<0){
+            ledc_set_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT, 0);
+            ledc_update_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT);
+            
+            ledc_set_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT, 0);
+            ledc_update_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT);
+            
+            ledc_set_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK, 0);
+            ledc_update_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK);
+            
+            ledc_set_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK, 0);
+            ledc_update_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK);
+        }
+        else if (x_axis<0 && y_axis>0){
+            ledc_set_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT, 0);
+            ledc_update_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT);
+            
+            ledc_set_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT, 0);
+            ledc_update_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT);
+            
+            ledc_set_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK, 0);
+            ledc_update_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK);
+            
+            ledc_set_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK, 0);
+            ledc_update_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK);
+        }
+        else if (x_axis<0 && y_axis<0){
+            ledc_set_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT, 0);
+            ledc_update_duty(LEDC_MODE_LEFT_FRONT, LEDC_CHANNEL_LEFT_FRONT);
+            
+            ledc_set_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT, 0);
+            ledc_update_duty(LEDC_MODE_RIGHT_FRONT, LEDC_CHANNEL_RIGHT_FRONT);
+            
+            ledc_set_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK, 0);
+            ledc_update_duty(LEDC_MODE_LEFT_BACK, LEDC_CHANNEL_LEFT_BACK);
+            
+            ledc_set_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK, 0);
+            ledc_update_duty(LEDC_MODE_RIGHT_BACK, LEDC_CHANNEL_RIGHT_BACK);
+        }
         
-        ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, duty);
-        ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-        ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, duty);
-        ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1);
+        // if (x_axis>0){
+        //     ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, duty_x);
+        //     ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
+        //     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, 0);
+        //     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
+        // }
+        // else{
+        //     ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0);
+        //     ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
+        //     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, duty_x);
+        //     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
+        // }
+        // if (y_axis>0){
+        //     ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, duty_y);
+        //     ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1);
+        //     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3, 0);
+        //     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3);
+        // }
+        // else{
+        //     ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, 0);
+        //     ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1);
+        //     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3, duty_y);
+        //     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3);
+        // }
+        
+
+        // -----------------------------------------------
+        // Mapeia os valores de 0 a 100 pra máximo de Duty
+        // -----------------------------------------------
     }
 }
 
