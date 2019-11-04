@@ -21,34 +21,28 @@
 #include "esp_bt_device.h"
 #include "esp_spp_api.h"
 
+#include "bt_handler.h"
+
 #include "time.h"
 #include "sys/time.h"
 
 #define SPP_TAG "SPP_ACCEPTOR_DEMO"
 #define SPP_SERVER_NAME "SPP_SERVER"
-#define EXAMPLE_DEVICE_NAME "ESP_SPP_ACCEPTOR"
-#define SPP_SHOW_DATA 0
-#define SPP_SHOW_SPEED 1
-#define SPP_SHOW_MODE SPP_SHOW_DATA    /*Choose show mode: show data or speed*/
+#define EXAMPLE_DEVICE_NAME "TCC_DA_LUZ"
 
 static const esp_spp_mode_t esp_spp_mode = ESP_SPP_MODE_CB;
-
-static struct timeval time_new, time_old;
-static long data_num = 0;
-
 static const esp_spp_sec_t sec_mask = ESP_SPP_SEC_AUTHENTICATE;
 static const esp_spp_role_t role_slave = ESP_SPP_ROLE_SLAVE;
 
-static void print_speed(void)
+#define HEX_OFFSET 48
+#define JOYSTICK_OFFSET 200
+
+static void process_bt_joystick_data(uint8_t *data, int8_t *x_axis, int8_t *y_axis)
 {
-    float time_old_s = time_old.tv_sec + time_old.tv_usec / 1000000.0;
-    float time_new_s = time_new.tv_sec + time_new.tv_usec / 1000000.0;
-    float time_interval = time_new_s - time_old_s;
-    float speed = data_num * 8 / time_interval / 1000.0;
-    ESP_LOGI(SPP_TAG, "speed(%fs ~ %fs): %f kbit/s" , time_old_s, time_new_s, speed);
-    data_num = 0;
-    time_old.tv_sec = time_new.tv_sec;
-    time_old.tv_usec = time_new.tv_usec;
+        // centena*100 + dezena*10 + unidade        
+        *x_axis = (data[1] - HEX_OFFSET)*100 + (data[2] - HEX_OFFSET)*10 + (data[3] - HEX_OFFSET) - JOYSTICK_OFFSET;
+        *y_axis = (data[4] - HEX_OFFSET)*100 + (data[5] - HEX_OFFSET)*10 + (data[6] - HEX_OFFSET) - JOYSTICK_OFFSET;
+        // int8_t x_axis = (data[1]*100 + data[2]*10 + data[3] - 111*HEX_OFFSET)  JOYSTICK_OFFSET;
 }
 
 static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
@@ -76,33 +70,15 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         ESP_LOGI(SPP_TAG, "ESP_SPP_CL_INIT_EVT");
         break;
     case ESP_SPP_DATA_IND_EVT:
-#if (SPP_SHOW_MODE == SPP_SHOW_DATA)
         ESP_LOGI(SPP_TAG, "ESP_SPP_DATA_IND_EVT len=%d handle=%d",
                  param->data_ind.len, param->data_ind.handle);
         esp_log_buffer_hex("", param->data_ind.data, param->data_ind.len);
 
-        const uint8_t hex_offset = 48;
-        const uint8_t joystick_offset = 200;
-        
-        uint8_t x_centena = param->data_ind.data[1] - hex_offset;
-        uint8_t x__dezena = param->data_ind.data[2] - hex_offset;
-        uint8_t x_unidade = param->data_ind.data[3] - hex_offset;
+        int8_t x_axis = 0;
+        int8_t y_axis = 0;
+        process_bt_joystick_data((param->data_ind.data), &x_axis, &y_axis);
+        printf("x:%d   y:%d\n", x_axis, y_axis);
 
-        uint8_t y_centena = param->data_ind.data[4] - hex_offset;
-        uint8_t y__dezena = param->data_ind.data[5] - hex_offset;
-        uint8_t y_unidade = param->data_ind.data[6] - hex_offset;
-        
-        int8_t x_axis = x_centena*100 + x__dezena*10 + x_unidade - joystick_offset;
-        int8_t y_axis = y_centena*100 + y__dezena*10 + y_unidade - joystick_offset;
-
-        printf("DATA: x:%d   y:%d \n", x_axis, y_axis);
-#else
-        gettimeofday(&time_new, NULL);
-        data_num += param->data_ind.len;
-        if (time_new.tv_sec - time_old.tv_sec >= 3) {
-            print_speed();
-        }
-#endif
         break;
     case ESP_SPP_CONG_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_CONG_EVT");
@@ -112,7 +88,6 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         break;
     case ESP_SPP_SRV_OPEN_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_SRV_OPEN_EVT");
-        gettimeofday(&time_old, NULL);
         break;
     default:
         break;
@@ -122,55 +97,55 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
 void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
 {
     switch (event) {
-    case ESP_BT_GAP_AUTH_CMPL_EVT:{
-        if (param->auth_cmpl.stat == ESP_BT_STATUS_SUCCESS) {
-            ESP_LOGI(SPP_TAG, "authentication success: %s", param->auth_cmpl.device_name);
-            esp_log_buffer_hex(SPP_TAG, param->auth_cmpl.bda, ESP_BD_ADDR_LEN);
-        } else {
-            ESP_LOGE(SPP_TAG, "authentication failed, status:%d", param->auth_cmpl.stat);
+        case ESP_BT_GAP_AUTH_CMPL_EVT:{
+            if (param->auth_cmpl.stat == ESP_BT_STATUS_SUCCESS) {
+                ESP_LOGI(SPP_TAG, "authentication success: %s", param->auth_cmpl.device_name);
+                esp_log_buffer_hex(SPP_TAG, param->auth_cmpl.bda, ESP_BD_ADDR_LEN);
+            } else {
+                ESP_LOGE(SPP_TAG, "authentication failed, status:%d", param->auth_cmpl.stat);
+            }
+            break;
         }
-        break;
-    }
-    case ESP_BT_GAP_PIN_REQ_EVT:{
-        ESP_LOGI(SPP_TAG, "ESP_BT_GAP_PIN_REQ_EVT min_16_digit:%d", param->pin_req.min_16_digit);
-        if (param->pin_req.min_16_digit) {
-            ESP_LOGI(SPP_TAG, "Input pin code: 0000 0000 0000 0000");
-            esp_bt_pin_code_t pin_code = {0};
-            esp_bt_gap_pin_reply(param->pin_req.bda, true, 16, pin_code);
-        } else {
-            ESP_LOGI(SPP_TAG, "Input pin code: 1234");
-            esp_bt_pin_code_t pin_code;
-            pin_code[0] = '1';
-            pin_code[1] = '2';
-            pin_code[2] = '3';
-            pin_code[3] = '4';
-            esp_bt_gap_pin_reply(param->pin_req.bda, true, 4, pin_code);
+        case ESP_BT_GAP_PIN_REQ_EVT:{
+            ESP_LOGI(SPP_TAG, "ESP_BT_GAP_PIN_REQ_EVT min_16_digit:%d", param->pin_req.min_16_digit);
+            if (param->pin_req.min_16_digit) {
+                ESP_LOGI(SPP_TAG, "Input pin code: 0000 0000 0000 0000");
+                esp_bt_pin_code_t pin_code = {0};
+                esp_bt_gap_pin_reply(param->pin_req.bda, true, 16, pin_code);
+            } else {
+                ESP_LOGI(SPP_TAG, "Input pin code: 1234");
+                esp_bt_pin_code_t pin_code;
+                pin_code[0] = '1';
+                pin_code[1] = '2';
+                pin_code[2] = '3';
+                pin_code[3] = '4';
+                esp_bt_gap_pin_reply(param->pin_req.bda, true, 4, pin_code);
+            }
+            break;
         }
-        break;
-    }
 
 #if (CONFIG_BT_SSP_ENABLED == true)
-    case ESP_BT_GAP_CFM_REQ_EVT:
-        ESP_LOGI(SPP_TAG, "ESP_BT_GAP_CFM_REQ_EVT Please compare the numeric value: %d", param->cfm_req.num_val);
-        esp_bt_gap_ssp_confirm_reply(param->cfm_req.bda, true);
-        break;
-    case ESP_BT_GAP_KEY_NOTIF_EVT:
-        ESP_LOGI(SPP_TAG, "ESP_BT_GAP_KEY_NOTIF_EVT passkey:%d", param->key_notif.passkey);
-        break;
-    case ESP_BT_GAP_KEY_REQ_EVT:
-        ESP_LOGI(SPP_TAG, "ESP_BT_GAP_KEY_REQ_EVT Please enter passkey!");
-        break;
+        case ESP_BT_GAP_CFM_REQ_EVT:
+            ESP_LOGI(SPP_TAG, "ESP_BT_GAP_CFM_REQ_EVT Please compare the numeric value: %d", param->cfm_req.num_val);
+            esp_bt_gap_ssp_confirm_reply(param->cfm_req.bda, true);
+            break;
+        case ESP_BT_GAP_KEY_NOTIF_EVT:
+            ESP_LOGI(SPP_TAG, "ESP_BT_GAP_KEY_NOTIF_EVT passkey:%d", param->key_notif.passkey);
+            break;
+        case ESP_BT_GAP_KEY_REQ_EVT:
+            ESP_LOGI(SPP_TAG, "ESP_BT_GAP_KEY_REQ_EVT Please enter passkey!");
+            break;
 #endif
 
-    default: {
-        ESP_LOGI(SPP_TAG, "event: %d", event);
-        break;
-    }
+        default: {
+            ESP_LOGI(SPP_TAG, "event: %d", event);
+            break;
+        }
     }
     return;
 }
 
-void app_main(void)
+void init_blutooth(void)
 {
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {

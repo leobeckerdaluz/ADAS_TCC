@@ -1,2 +1,6 @@
-idf_component_register(SRCS "example_spp_acceptor_demo.c"
-                    INCLUDE_DIRS ".")
+set(srcs
+    "bt_handler.c"
+    "main.c")
+    
+idf_component_register( SRCS "${srcs}"
+                        INCLUDE_DIRS ".")
