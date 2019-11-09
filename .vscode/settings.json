@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "bt_handler.h": "c",
+        "mcpwm_brushed_dc_control.h": "c",
+        "definitions.h": "c",
+        "stdio.h": "c",
+        "time.h": "c",
+        "stdint.h": "c"
+    }
+}

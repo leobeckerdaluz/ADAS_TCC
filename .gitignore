@@ -1,2 +1,5 @@
 CarControlESP32/.pio/
 ESP_IDF_CarControlESP32/build
+ESP_IDF_CarControlESP32/.vscode
+uart_echo/.vscode
+uart_echo/build

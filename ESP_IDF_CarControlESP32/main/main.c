@@ -8,6 +8,7 @@
 
 #include "bt_handler.h"
 #include "adas_car.h"
+#include "from_adas_rasp_uart.h"
 
 void blink_task(void *pvParameter)
 {
@@ -37,4 +38,5 @@ void app_main(void){
     init_bluetooth();
 
     xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
+    xTaskCreate(echo_task, "uart_echo_task", 1024, NULL, 10, NULL);
 }
