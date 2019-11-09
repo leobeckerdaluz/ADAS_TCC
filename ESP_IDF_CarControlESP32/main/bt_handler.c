@@ -21,10 +21,10 @@
 #include "esp_bt_device.h"
 #include "esp_spp_api.h"
 
-#include "bt_handler.h"
-
 #include "time.h"
 #include "sys/time.h"
+
+#include "bt_handler.h"
 
 #define SPP_TAG "SPP_ACCEPTOR_DEMO"
 #define SPP_SERVER_NAME "SPP_SERVER"
@@ -33,17 +33,6 @@
 static const esp_spp_mode_t esp_spp_mode = ESP_SPP_MODE_CB;
 static const esp_spp_sec_t sec_mask = ESP_SPP_SEC_AUTHENTICATE;
 static const esp_spp_role_t role_slave = ESP_SPP_ROLE_SLAVE;
-
-#define HEX_OFFSET 48
-#define JOYSTICK_OFFSET 200
-
-static void process_bt_joystick_data(uint8_t *data, int8_t *x_axis, int8_t *y_axis)
-{
-        // centena*100 + dezena*10 + unidade        
-        *x_axis = (data[1] - HEX_OFFSET)*100 + (data[2] - HEX_OFFSET)*10 + (data[3] - HEX_OFFSET) - JOYSTICK_OFFSET;
-        *y_axis = (data[4] - HEX_OFFSET)*100 + (data[5] - HEX_OFFSET)*10 + (data[6] - HEX_OFFSET) - JOYSTICK_OFFSET;
-        // int8_t x_axis = (data[1]*100 + data[2]*10 + data[3] - 111*HEX_OFFSET)  JOYSTICK_OFFSET;
-}
 
 static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
 {
@@ -74,10 +63,21 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
                  param->data_ind.len, param->data_ind.handle);
         esp_log_buffer_hex("", param->data_ind.data, param->data_ind.len);
 
-        int8_t x_axis = 0;
-        int8_t y_axis = 0;
-        process_bt_joystick_data((param->data_ind.data), &x_axis, &y_axis);
-        printf("x:%d   y:%d\n", x_axis, y_axis);
+        const uint8_t hex_offset = 48;
+        const uint8_t joystick_offset = 200;
+        
+        uint8_t x_centena = param->data_ind.data[1] - hex_offset;
+        uint8_t x__dezena = param->data_ind.data[2] - hex_offset;
+        uint8_t x_unidade = param->data_ind.data[3] - hex_offset;
+
+        uint8_t y_centena = param->data_ind.data[4] - hex_offset;
+        uint8_t y__dezena = param->data_ind.data[5] - hex_offset;
+        uint8_t y_unidade = param->data_ind.data[6] - hex_offset;
+        
+        int8_t x_axis = x_centena*100 + x__dezena*10 + x_unidade - joystick_offset;
+        int8_t y_axis = y_centena*100 + y__dezena*10 + y_unidade - joystick_offset;
+
+        printf("DATA: x:%d   y:%d \n", x_axis, y_axis);
 
         break;
     case ESP_SPP_CONG_EVT:
@@ -145,7 +145,7 @@ void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
     return;
 }
 
-void init_blutooth(void)
+void init_bluetooth()
 {
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -207,4 +207,3 @@ void init_blutooth(void)
     esp_bt_pin_code_t pin_code;
     esp_bt_gap_set_pin(pin_type, 0, pin_code);
 }
-
