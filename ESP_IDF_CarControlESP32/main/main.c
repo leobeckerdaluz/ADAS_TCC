@@ -8,7 +8,7 @@
 
 #include "bt_handler.h"
 #include "adas_car.h"
-#include "from_adas_rasp_uart.h"
+#include "ecu_uart.h"
 #include "mcpwm_brushed_dc_control.h"
 
 void blink_task(void *pvParameter)
@@ -36,20 +36,35 @@ void blink_task(void *pvParameter)
 /**
  * @brief Configure MCPWM module for brushed dc motor
  */
+void get_speeds(void *arg)
+{
+    gpio_pad_select_gpio(SPEED_SENSOR_LEFT_GPIO);
+    gpio_pad_select_gpio(SPEED_SENSOR_RIGHT_GPIO);
+
+    gpio_set_direction(SPEED_SENSOR_LEFT_GPIO, GPIO_MODE_INPUT);
+    gpio_set_direction(SPEED_SENSOR_RIGHT_GPIO, GPIO_MODE_INPUT);
+}
+
+/**
+ * @brief Configure MCPWM module for brushed dc motor
+ */
 void mcpwm_example_brushed_motor_control(void *arg)
 {
     mcpwm_example_gpio_initialize();
 
     while (1) {
-        brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, 50.0);
-        brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, 50.0);
+        float duty = (float)abs(y_axis);
 
-        vTaskDelay(2000 / portTICK_RATE_MS);
-
-        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, 50.0);
-        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, 50.0);
-
-        vTaskDelay(2000 / portTICK_RATE_MS);
+        if (y_axis > 0){
+            brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty);
+            brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty);
+            printf("Indo pra frente por %f\n", duty);
+        }
+        else if (y_axis < 0){
+            brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty);
+            brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty);
+            printf("Indo pra trás por %f\n", duty);
+        }
     }
 }
 

@@ -30,6 +30,9 @@
 #define SPP_SERVER_NAME "SPP_SERVER"
 #define EXAMPLE_DEVICE_NAME "TCC_DA_LUZ"
 
+int8_t x_axis = 0;
+int8_t y_axis = 0;
+
 static const esp_spp_mode_t esp_spp_mode = ESP_SPP_MODE_CB;
 static const esp_spp_sec_t sec_mask = ESP_SPP_SEC_AUTHENTICATE;
 static const esp_spp_role_t role_slave = ESP_SPP_ROLE_SLAVE;
@@ -63,20 +66,9 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
                  param->data_ind.len, param->data_ind.handle);
         esp_log_buffer_hex("", param->data_ind.data, param->data_ind.len);
 
-        const uint8_t hex_offset = 48;
-        const uint8_t joystick_offset = 200;
-        
-        uint8_t x_centena = param->data_ind.data[1] - hex_offset;
-        uint8_t x__dezena = param->data_ind.data[2] - hex_offset;
-        uint8_t x_unidade = param->data_ind.data[3] - hex_offset;
-
-        uint8_t y_centena = param->data_ind.data[4] - hex_offset;
-        uint8_t y__dezena = param->data_ind.data[5] - hex_offset;
-        uint8_t y_unidade = param->data_ind.data[6] - hex_offset;
-        
-        int8_t x_axis = x_centena*100 + x__dezena*10 + x_unidade - joystick_offset;
-        int8_t y_axis = y_centena*100 + y__dezena*10 + y_unidade - joystick_offset;
-
+        // Obtém os valores dos eixos
+        x_axis = (param->data_ind.data[1] - HEX_OFFSET)*100 + (param->data_ind.data[2] - HEX_OFFSET)*10 + (param->data_ind.data[3] - HEX_OFFSET) - JOYSTICK_OFFSET;
+        y_axis = (param->data_ind.data[4] - HEX_OFFSET)*100 + (param->data_ind.data[5] - HEX_OFFSET)*10 + (param->data_ind.data[6] - HEX_OFFSET) - JOYSTICK_OFFSET;
         printf("DATA: x:%d   y:%d \n", x_axis, y_axis);
 
         break;

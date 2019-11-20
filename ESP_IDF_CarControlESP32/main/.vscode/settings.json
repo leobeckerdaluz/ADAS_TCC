@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "ecu_uart.h": "c",
+        "adas_car.h": "c"
+    }
+}
