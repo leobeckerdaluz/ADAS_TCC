@@ -8,8 +8,9 @@
 
 #include "bt_handler.h"
 #include "adas_car.h"
-#include "ecu_uart.h"
+#include "uart_handler.h"
 #include "mcpwm_brushed_dc_control.h"
+#include "encoder_isr.h"
 
 void blink_task(void *pvParameter)
 {
@@ -32,17 +33,8 @@ void blink_task(void *pvParameter)
     }
 }
 
-
-/**
- * @brief Configure MCPWM module for brushed dc motor
- */
 void get_speeds(void *arg)
 {
-    gpio_pad_select_gpio(SPEED_SENSOR_LEFT_GPIO);
-    gpio_pad_select_gpio(SPEED_SENSOR_RIGHT_GPIO);
-
-    gpio_set_direction(SPEED_SENSOR_LEFT_GPIO, GPIO_MODE_INPUT);
-    gpio_set_direction(SPEED_SENSOR_RIGHT_GPIO, GPIO_MODE_INPUT);
 }
 
 /**
@@ -73,10 +65,12 @@ void app_main(void){
     printf("Começou!\n");
 
     init_bluetooth();
+    set_encoder_ISRs();
+    init_uart1();
 
     xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
-    xTaskCreate(echo_task, "uart_echo_task", 1024, NULL, 10, NULL);
-
-    printf("Testing brushed motor...\n");
-    xTaskCreate(mcpwm_example_brushed_motor_control, "mcpwm_examlpe_brushed_motor_control", 4096, NULL, 5, NULL);
+    xTaskCreate(get_ECU_serial_parameters_TASK, "get_ECU_serial_parameters_TASK", 1024, NULL, 10, NULL);
+    // xTaskCreate(mcpwm_example_brushed_motor_control, "mcpwm_examlpe_brushed_motor_control", 4096, NULL, 5, NULL);
+    xTaskCreate(get_rms_task, "encoder_task", 4096, NULL, 10, NULL);
+    
 }
