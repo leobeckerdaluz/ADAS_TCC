@@ -7,4 +7,4 @@
 
 void init_uart1();
 void get_ECU_serial_parameters_TASK(void *arg);
-void send_speed_to_ECU(float rpm);
+void send_speed_to_ECU(float avg_speed);

@@ -13,6 +13,7 @@
 #include "driver/gpio.h"
 
 #include <string.h>
+#include <math.h>
 #include "uart_handler.h"
 
 /**
@@ -42,15 +43,20 @@ void init_uart1(void){
     uart_driver_install(UART_NUM_1, BUF_SIZE * 2, 0, 0, NULL, 0);
 }
 
-void send_speed_to_ECU(float rpm)
+void send_speed_to_ECU(float avg_speed)
 {
-    // // Configure a temporary buffer for the incoming data
-    // uint8_t *data = (uint8_t *) malloc(2);
+    // Converts float to string
+    char str[100];
+    char *tmpSign = (avg_speed < 0) ? "-" : "";
+    float tmpVal = (avg_speed < 0) ? -avg_speed : avg_speed;
 
-    // int len = 2;
+    int tmpInt1 = tmpVal;                  // Get the integer (678).
+    float tmpFrac = tmpVal - tmpInt1;      // Get fraction (0.0123).
+    int tmpInt2 = trunc(tmpFrac * 10000);  // Turn into integer (123).
 
-    // // Write data back to the UART
-    // uart_write_bytes(UART_NUM_1, (const char *) data, len);
+    // Print as parts, note that you need 0-padding for fractional bit.
+    sprintf (str, "avg_speed = %s%d.%04d\n", tmpSign, tmpInt1, tmpInt2);
+    printf("\nEnviando Average Speed na Serial: %s\n", str);
 
     // Write data to UART.
     char* test_str = "This is a test string.\n";

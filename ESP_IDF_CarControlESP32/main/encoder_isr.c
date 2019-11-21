@@ -62,6 +62,7 @@ void get_rms_task(void* arg)
     float right_rps = 0;
     float left_speed = 0;
     float right_speed = 0;
+    float avg_speed = 0;
 
     for(;;) {
         // Calcula o RPM
@@ -71,15 +72,17 @@ void get_rms_task(void* arg)
         right_rps = 1000.0 * cont_right_encoder / DELAY_CALCULATE_RPM / PULSES_PER_REVOLUTION;
         left_speed = left_rps * WHEEL_CIRCUMFERENCE;
         right_speed = right_rps * WHEEL_CIRCUMFERENCE;
+        avg_speed = (left_speed + right_speed)/2;
         printf("LEFT  ENCODER: %d \n", cont_left_encoder);
         printf("RIGHT ENCODER: %d \n", cont_right_encoder);
         printf("left  RPM: %f \n", left_rps);
         printf("right RPM: %f \n", right_rps);
         printf("left  SPEED: %f cm/s \n", left_speed);
         printf("right SPEED: %f cm/s \n", right_speed);
+        printf("mean  SPEED: %f cm/s \n", avg_speed);
         printf("-----------------\n");
 
-        send_speed_to_ECU(left_rps);
+        send_speed_to_ECU(avg_speed);
         
         cont_left_encoder = 0;
         cont_right_encoder = 0;
