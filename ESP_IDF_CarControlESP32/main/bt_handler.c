@@ -24,6 +24,8 @@
 #include "time.h"
 #include "sys/time.h"
 
+#include "mcpwm_brushed_dc_control.h"
+#include "uart_handler.h"
 #include "bt_handler.h"
 
 #define SPP_TAG "SPP_ACCEPTOR_DEMO"
@@ -69,7 +71,17 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         // Obtém os valores dos eixos
         x_axis = (param->data_ind.data[1] - HEX_OFFSET)*100 + (param->data_ind.data[2] - HEX_OFFSET)*10 + (param->data_ind.data[3] - HEX_OFFSET) - JOYSTICK_OFFSET;
         y_axis = (param->data_ind.data[4] - HEX_OFFSET)*100 + (param->data_ind.data[5] - HEX_OFFSET)*10 + (param->data_ind.data[6] - HEX_OFFSET) - JOYSTICK_OFFSET;
-        printf("DATA: x:%d   y:%d \n", x_axis, y_axis);
+        printf("----> DATA: x:%d   y:%d \n", x_axis, y_axis);
+
+        // Se está no modo de auto brake, 
+        if (current_state == 2)
+            // freia os 2 motores
+            stop_all_motors();
+        else
+            // Senão, seta a direção normalmente
+            mcpwm_motor_control(x_axis, y_axis);
+
+        
 
         break;
     case ESP_SPP_CONG_EVT:
@@ -137,7 +149,7 @@ void esp_bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
     return;
 }
 
-void init_bluetooth()
+void configure_bluetooth_and_events()
 {
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {

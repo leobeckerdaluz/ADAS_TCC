@@ -33,44 +33,53 @@ void blink_task(void *pvParameter)
     }
 }
 
-void get_speeds(void *arg)
+void alarms_task(void *pvParameter)
 {
-}
+    gpio_pad_select_gpio(BUZZER_GPIO);
+    /* Set the GPIO as a push/pull output */
+    gpio_set_direction(BUZZER_GPIO, GPIO_MODE_OUTPUT);
+    
+    static uint8_t buzzer_status = 0;
 
-/**
- * @brief Configure MCPWM module for brushed dc motor
- */
-void mcpwm_example_brushed_motor_control(void *arg)
-{
-    mcpwm_example_gpio_initialize();
+    while(1){
+        switch (current_state)
+        {
+            case 0:
+                gpio_set_level(BUZZER_GPIO, 0);
+            break;
+            
+            case 1:
+                printf("\nBUZZER\nnBUZZER\n");
+                printf("\nFUDEUUUUUUUUUUUUUUUUUUUU\nnBUZZER\n");
+                
+                buzzer_status = !buzzer_status;
+                gpio_set_level(BUZZER_GPIO, buzzer_status);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+            break;
 
-    while (1) {
-        float duty = (float)abs(y_axis);
-
-        if (y_axis > 0){
-            brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty);
-            brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty);
-            printf("Indo pra frente por %f\n", duty);
+            case 2:
+                gpio_set_level(BUZZER_GPIO, 1);
+            break;
+        
+            default:
+                gpio_set_level(BUZZER_GPIO, 0);
+            break;
         }
-        else if (y_axis < 0){
-            brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty);
-            brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty);
-            printf("Indo pra trás por %f\n", duty);
-        }
+        vTaskDelay(5 / portTICK_PERIOD_MS);   
     }
 }
-
 
 void app_main(void){
     printf("Começou!\n");
 
-    init_bluetooth();
+    configure_bluetooth_and_events();
     set_encoder_ISRs();
     init_uart1();
+    mcpwm_example_gpio_initialize();
 
     xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
-    xTaskCreate(get_ECU_serial_parameters_TASK, "get_ECU_serial_parameters_TASK", 1024, NULL, 10, NULL);
-    // xTaskCreate(mcpwm_example_brushed_motor_control, "mcpwm_examlpe_brushed_motor_control", 4096, NULL, 5, NULL);
+    xTaskCreate(get_ECU_serial_parameters_TASK, "get_ECU_serial_parameters_TASK", 2048, NULL, 10, NULL);
     xTaskCreate(get_rms_task, "encoder_task", 4096, NULL, 10, NULL);
+    xTaskCreate(alarms_task, "alarms_task", 2048, NULL, 10, NULL);
     
 }

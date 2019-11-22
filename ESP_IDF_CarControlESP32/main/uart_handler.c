@@ -16,6 +16,8 @@
 #include <math.h>
 #include "uart_handler.h"
 
+uint8_t current_state = 0;
+
 /**
  * This is an example which echos any data it receives on UART1 back to the sender,
  * with hardware flow control turned off. It does not use UART driver event queue.
@@ -32,7 +34,7 @@ void init_uart1(void){
     /* Configure parameters of an UART driver,
      * communication pins and install the driver */
     uart_config_t uart_config = {
-        .baud_rate = 9600,
+        .baud_rate = ECU_COM_BAUDRATE,
         .data_bits = UART_DATA_8_BITS,
         .parity    = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
@@ -47,7 +49,7 @@ void send_speed_to_ECU(float avg_speed)
 {
     // Converts float to string
     char str[100];
-    char *tmpSign = (avg_speed < 0) ? "-" : "";
+    const char *tmpSign = (avg_speed < 0) ? "-" : "";
     float tmpVal = (avg_speed < 0) ? -avg_speed : avg_speed;
 
     int tmpInt1 = tmpVal;                  // Get the integer (678).
@@ -59,7 +61,7 @@ void send_speed_to_ECU(float avg_speed)
     printf("\nEnviando Average Speed na Serial: %s\n", str);
 
     // Write data to UART.
-    char* test_str = "This is a test string.\n";
+    const char* test_str = "This is a test string.\n";
     uart_write_bytes(UART_NUM_1, (const char*)test_str, strlen(test_str));
 }
 
@@ -75,8 +77,11 @@ void get_ECU_serial_parameters_TASK(void *arg)
         // uart_write_bytes(UART_NUM_1, (const char *) data, len);
         
         if (len>0){
+            current_state = data[0]-48;
+
             printf("Chegou! Len: %d\n", len);
-            printf("data: %d %d\n", data[0]-48, data[2]-48);
+            printf("data: %d %d\n", current_state, data[2]-48);
+            printf("current_state: %d\n", current_state);
         }
     }
 }

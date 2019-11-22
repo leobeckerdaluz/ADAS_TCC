@@ -22,6 +22,8 @@
 #include "driver/mcpwm.h"
 #include "soc/mcpwm_periph.h"
 
+#include "bt_handler.h"
+
 #include "mcpwm_brushed_dc_control.h"
 
 void mcpwm_example_gpio_initialize(void)
@@ -73,4 +75,48 @@ void brushed_motor_stop(mcpwm_unit_t mcpwm_num, mcpwm_timer_t timer_num)
 {
     mcpwm_set_signal_low(mcpwm_num, timer_num, MCPWM_OPR_A);
     mcpwm_set_signal_low(mcpwm_num, timer_num, MCPWM_OPR_B);
+}
+
+
+void stop_all_motors(){
+    brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+    brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
+}
+
+
+/**
+ * @brief Configure MCPWM module for brushed dc motor
+ */
+void mcpwm_motor_control(int8_t x_axis, int8_t y_axis)
+{
+    // interpolar os dados pra saber quanto de duty em cada roda
+    float duty_y =  (float)abs(y_axis);
+    float duty_x =  (float)abs(x_axis);
+
+    const int limit = 50;
+    if (x_axis > limit){
+        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_x);
+        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, 0);
+        printf("Indo pra direita por %f\n", duty_x);
+    }
+    else if (x_axis < -limit){
+        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, 0);
+        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_x);
+        printf("Indo pra esquerda por %f\n", duty_x);
+    }
+    else if (y_axis > limit){
+        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_y);
+        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_y);
+        printf("Indo pra frente por %f\n", duty_y);
+    }
+    else if (y_axis < -limit){
+        brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_y);
+        brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_y);
+        printf("Indo pra trás por %f\n", duty_y);
+    }
+    else{
+        brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+        brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
+        printf("PAROU\n");
+    }
 }

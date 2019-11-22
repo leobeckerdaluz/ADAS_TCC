@@ -9,4 +9,4 @@
 extern int8_t x_axis;
 extern int8_t y_axis;
 
-extern void init_bluetooth();
+extern void configure_bluetooth_and_events();

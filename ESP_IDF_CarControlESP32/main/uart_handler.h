@@ -4,6 +4,9 @@
 #define ECHO_TEST_CTS  (UART_PIN_NO_CHANGE)
 
 #define BUF_SIZE (1024)
+#define ECU_COM_BAUDRATE 9600
+
+extern uint8_t current_state;
 
 void init_uart1();
 void get_ECU_serial_parameters_TASK(void *arg);
