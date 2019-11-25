@@ -14,15 +14,6 @@
 
 void blink_task(void *pvParameter)
 {
-    /* Configure the IOMUX register for pad BLINK_GPIO (some pads are
-       muxed to GPIO on reset already, but some default to other
-       functions and need to be switched to GPIO. Consult the
-       Technical Reference for a list of pads and their default
-       functions.)
-    */
-    gpio_pad_select_gpio(BLINK_GPIO);
-    /* Set the GPIO as a push/pull output */
-    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
     while(1) {
         /* Blink off (output low) */
         gpio_set_level(BLINK_GPIO, 0);
@@ -46,10 +37,11 @@ void alarms_task(void *pvParameter)
         {
             case 0:
                 gpio_set_level(BUZZER_GPIO, 0);
+                printf("\nBUZZER OFF\n");
+                vTaskDelay(5 / portTICK_PERIOD_MS);   
             break;
             
             case 1:
-                printf("\nBUZZER\nnBUZZER\n");
                 printf("\nFUDEUUUUUUUUUUUUUUUUUUUU\nnBUZZER\n");
                 
                 buzzer_status = !buzzer_status;
@@ -58,28 +50,34 @@ void alarms_task(void *pvParameter)
             break;
 
             case 2:
+                printf("\nBUZZER ON\n");
                 gpio_set_level(BUZZER_GPIO, 1);
+                vTaskDelay(5 / portTICK_PERIOD_MS);   
             break;
         
             default:
                 gpio_set_level(BUZZER_GPIO, 0);
+                vTaskDelay(5 / portTICK_PERIOD_MS);   
             break;
         }
-        vTaskDelay(5 / portTICK_PERIOD_MS);   
     }
 }
 
 void app_main(void){
     printf("Começou!\n");
 
-    configure_bluetooth_and_events();
+    gpio_pad_select_gpio(BLINK_GPIO);
+    /* Set the GPIO as a push/pull output */
+    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
+
+    mcpwm_example_gpio_initialize();
+    configure_bluetooth_and_events();   // When data comes, motor is handled
     set_encoder_ISRs();
     init_uart1();
-    mcpwm_example_gpio_initialize();
 
-    xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
+    // xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
     xTaskCreate(get_ECU_serial_parameters_TASK, "get_ECU_serial_parameters_TASK", 2048, NULL, 10, NULL);
-    xTaskCreate(get_rms_task, "encoder_task", 4096, NULL, 10, NULL);
+    // xTaskCreate(get_rms_task, "encoder_task", 4096, NULL, 10, NULL);
     xTaskCreate(alarms_task, "alarms_task", 2048, NULL, 10, NULL);
     
 }

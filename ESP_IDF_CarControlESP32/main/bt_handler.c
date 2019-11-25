@@ -20,6 +20,7 @@
 #include "esp_gap_bt_api.h"
 #include "esp_bt_device.h"
 #include "esp_spp_api.h"
+#include <driver/gpio.h>
 
 #include "time.h"
 #include "sys/time.h"
@@ -27,6 +28,7 @@
 #include "mcpwm_brushed_dc_control.h"
 #include "uart_handler.h"
 #include "bt_handler.h"
+#include "adas_car.h"
 
 #define SPP_TAG "SPP_ACCEPTOR_DEMO"
 #define SPP_SERVER_NAME "SPP_SERVER"
@@ -56,6 +58,7 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         break;
     case ESP_SPP_CLOSE_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_CLOSE_EVT");
+        gpio_set_level(BLINK_GPIO, 0);
         break;
     case ESP_SPP_START_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_START_EVT");
@@ -73,16 +76,9 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         y_axis = (param->data_ind.data[4] - HEX_OFFSET)*100 + (param->data_ind.data[5] - HEX_OFFSET)*10 + (param->data_ind.data[6] - HEX_OFFSET) - JOYSTICK_OFFSET;
         printf("----> DATA: x:%d   y:%d \n", x_axis, y_axis);
 
-        // Se está no modo de auto brake, 
-        if (current_state == 2)
-            // freia os 2 motores
-            stop_all_motors();
-        else
-            // Senão, seta a direção normalmente
-            mcpwm_motor_control(x_axis, y_axis);
-
+        // Motores são controlados com base nos parâmetros
+        mcpwm_motor_control(x_axis, y_axis);
         
-
         break;
     case ESP_SPP_CONG_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_CONG_EVT");
@@ -92,6 +88,7 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         break;
     case ESP_SPP_SRV_OPEN_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_SRV_OPEN_EVT");
+        gpio_set_level(BLINK_GPIO, 1);
         break;
     default:
         break;

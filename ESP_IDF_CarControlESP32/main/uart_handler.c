@@ -49,7 +49,7 @@ void send_speed_to_ECU(float avg_speed)
 {
     // Converts float to string
     char str[100];
-    const char *tmpSign = (avg_speed < 0) ? "-" : "";
+    // const char *tmpSign = (avg_speed < 0) ? "-" : "";
     float tmpVal = (avg_speed < 0) ? -avg_speed : avg_speed;
 
     int tmpInt1 = tmpVal;                  // Get the integer (678).
@@ -57,12 +57,12 @@ void send_speed_to_ECU(float avg_speed)
     int tmpInt2 = trunc(tmpFrac * 10000);  // Turn into integer (123).
 
     // Print as parts, note that you need 0-padding for fractional bit.
-    sprintf (str, "avg_speed = %s%d.%04d\n", tmpSign, tmpInt1, tmpInt2);
-    printf("\nEnviando Average Speed na Serial: %s\n", str);
+    sprintf(str, "%d.%04d\n", tmpInt1, tmpInt2);
+    printf("\nEnviando Average Speed na Serial: %s    strlen: %d\n", str, strlen(str));
 
     // Write data to UART.
-    const char* test_str = "This is a test string.\n";
-    uart_write_bytes(UART_NUM_1, (const char*)test_str, strlen(test_str));
+    // const char* test_str = "This is a test string.\n";
+    uart_write_bytes(UART_NUM_1, (const char*)str, strlen(str));
 }
 
 void get_ECU_serial_parameters_TASK(void *arg)

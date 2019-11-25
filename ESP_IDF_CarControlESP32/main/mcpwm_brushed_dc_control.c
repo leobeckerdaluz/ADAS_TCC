@@ -24,6 +24,7 @@
 
 #include "bt_handler.h"
 
+#include "uart_handler.h"
 #include "mcpwm_brushed_dc_control.h"
 
 void mcpwm_example_gpio_initialize(void)
@@ -89,34 +90,59 @@ void stop_all_motors(){
  */
 void mcpwm_motor_control(int8_t x_axis, int8_t y_axis)
 {
-    // interpolar os dados pra saber quanto de duty em cada roda
+    const int limit = 60;
+    
+    // Converte os valores de duty
     float duty_y =  (float)abs(y_axis);
     float duty_x =  (float)abs(x_axis);
-
-    const int limit = 50;
-    if (x_axis > limit){
-        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_x);
-        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, 0);
-        printf("Indo pra direita por %f\n", duty_x);
+    
+    // FUTURO - interpolar os dados pra saber quanto de duty em cada roda
+    
+    // Se não está no modo de auto brake, 
+    if (current_state == 2)
+    {
+        if (y_axis < -limit){
+            brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_y);
+            brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_y);
+            printf("Indo pra trás por %f\n", duty_y);
+        }
+        else
+        {
+            brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+            brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
+            printf("PAROU\n");
+        }
     }
-    else if (x_axis < -limit){
-        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, 0);
-        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_x);
-        printf("Indo pra esquerda por %f\n", duty_x);
-    }
-    else if (y_axis > limit){
-        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_y);
-        brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_y);
-        printf("Indo pra frente por %f\n", duty_y);
-    }
-    else if (y_axis < -limit){
-        brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_y);
-        brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_y);
-        printf("Indo pra trás por %f\n", duty_y);
-    }
-    else{
-        brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
-        brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
-        printf("PAROU\n");
+    else
+    {
+        if (x_axis > limit){
+            brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_x);
+            brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_x/3);
+            printf("Indo pra direita por %f\n", duty_x);
+        }
+        else if (x_axis < -limit)
+        {
+            brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_x/3);
+            brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_x);
+            printf("Indo pra esquerda por %f\n", duty_x);
+        }
+        else if (y_axis > limit)
+        {
+            brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_y);
+            brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_y);
+            printf("Indo pra frente por %f\n", duty_y);
+        }
+        else if (y_axis < -limit)
+        {
+            brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_y);
+            brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_y);
+            printf("Indo pra trás por %f\n", duty_y);
+        }
+        else
+        {
+            brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+            brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
+            printf("PAROU\n");
+        }
     }
 }

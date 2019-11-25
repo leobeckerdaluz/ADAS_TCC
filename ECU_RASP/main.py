@@ -1,4 +1,4 @@
-#Libraries
+# Declara-se as bibliotecas que serão utilizadas no código
 if not __debug__:
     import RPi.GPIO as GPIO
 import time
@@ -8,18 +8,50 @@ from multiprocessing import Lock
 import threading 
 import statistics
 import sys
+import serial
 
-# Constants
-AUTOBRAKE_DIST = 12.0 #cm
-COLLISION_DIST = 18.0 #cm
-SENSOR_READ_INTERVAL = 0.00001 #s
-GET_MEDIAN_INTERVAL = 0.05 #s
-LEAVE_SAMPLE_INTERVAL = 0.005 #s
+if not __debug__:
+    #Configura o uso do terminal serial e da taxa de transmissão de dados
+    ser = serial.Serial("/dev/ttyS0", 9600)
 
-# IDs
+ACTIVE_SENSOR0 = True
+ACTIVE_SENSOR1 = True
+ACTIVE_SENSOR2 = False
+ACTIVE__CAMERA = False
+
+# Distâncias para alteração de estados
+AUTOBRAKE_DIST = 15.0 #cm
+COLLISION_DIST = 22.0 #cm
+
+# Constantes de amostra
+SENSOR_READ_INTERVAL = 0.00002 #s
+LEAVE_SAMPLE_INTERVAL = 0.01 #s
+PROCESS_SENSOR_DATA_INTERVAL = 0.1 #s
+
+# ID de cada estado
+AUTOBRAKE_STATE_ID = 2
+PRECOLLISION_STATE_ID = 1
+NORMAL_STATE_ID = 0
+
+# Eventos para considerar de fato a mudança de estado
+EVENTS_ARRAY_SIZE = 10                  # Tamanho do vetor que armazena os últimos estados
+COUNT_AUTOBRAKE_FALSE_ALARM = 3         # Qtde de falsos alarmes permitidos antes de mudar para Autobrake
+COUNT_PRECOLLISION_FALSE_ALARM = 2      # Qtde de falsos alarmes permitidos antes de mudar para Collision
+COUNT_NORMAL_FALSE_ALARM = 2            # Qtde de falsos alarmes permitidos antes de mudar de volta para Normal
+
+# SENSORS ENUM
 SENSOR0_ID = 0
 SENSOR1_ID = 1
 SENSOR2_ID = 2
+
+# Lista com os últimos estados
+last_states = [0] * EVENTS_ARRAY_SIZE
+
+# Estado atual do sistema
+current_state = 0
+
+
+START_LED = 18
 
 #set SENSORS Pins
 GPIO_TRIGGER_0 = 23
@@ -28,11 +60,7 @@ GPIO_TRIGGER_1 = 4
 GPIO_ECHO_1 = 17
 GPIO_TRIGGER_2 = 27
 GPIO_ECHO_2 = 22
-#set OUTPUTS Pins
-GPIO_COLLISION = 20
-GPIO_AUTOBRAKE = 21
 
-mutex_GPIO_WRITE = Lock()
 lock_0 = Lock()
 lock_1 = Lock()
 lock_2 = Lock()
@@ -42,9 +70,23 @@ sensor0_distances = []
 sensor1_distances = []
 sensor2_distances = []
 camera_distances = []
+    
+# def get_speed_via_serial_thread(ID):
+#     while True:
+#         # print("\nDEU CERTO!\n")
+#         line = ser.readline()
+#         print("\n")
+        
+#         # print(line)
+#         substr = line[2:-1]
+#         current_speed = float(line)
+#         print(current_speed)
+        
+#         print("\n")
+#         # time.sleep(1)
 
 def sensor_thread(ID, GPIO_TRIGGER, GPIO_ECHO):
-    print(str(ID) + ": Chegou " + str(GPIO_TRIGGER) + " e " + str(GPIO_ECHO))
+    print(str(ID) + ": Começou a thread! Pins: ->" + str(GPIO_TRIGGER) + " e " + str(GPIO_ECHO))
 
     if __debug__:
         while True:
@@ -72,26 +114,19 @@ def sensor_thread(ID, GPIO_TRIGGER, GPIO_ECHO):
                 lock_2.release()
                 time.sleep(0.00001)
     else:
-        mutex_GPIO_WRITE.acquire()
         #set GPIO direction
         GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
         GPIO.setup(GPIO_ECHO, GPIO.IN)
-        mutex_GPIO_WRITE.release()
 
         while True:
-            
             # Turn on Trigger
-            mutex_GPIO_WRITE.acquire()
             GPIO.output(GPIO_TRIGGER, True)
-            mutex_GPIO_WRITE.release()
         
             # set Trigger after 0.01ms to LOW
             time.sleep(SENSOR_READ_INTERVAL)
             
             # Turn off Trigger
-            mutex_GPIO_WRITE.acquire()
             GPIO.output(GPIO_TRIGGER, False)
-            mutex_GPIO_WRITE.release()
         
             SampleStartTime = time.time()
             
@@ -160,19 +195,24 @@ def image_processing_thread(ID):
         time.sleep(0.1)
 
 def get_median_distances_thread(ID, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE_SENSOR2, ACTIVE__CAMERA): 
-    print("{}: Real Distances".format(ID))
+    global current_state
+    print("{}: Processa as distâncias de cada sensor".format(ID))
 
+    i = 0
     while True:
+        # -----------------------------
+        # Get distances
+
         if ACTIVE__CAMERA:
             lock_camera.acquire()
-            camera_len = len(camera_distances)
-            if (camera_len>0):
+            camera_distances_array_len = len(camera_distances)
+            if (camera_distances_array_len>0):
                 camera_median = statistics.median(camera_distances)
                 camera_distances.clear()
-                # print("cont camera: {}".format(camera_len))
+                # print("cont camera: {}".format(camera_distances_array_len))
                 print("camera: {}".format(camera_median))
             else:
-                print("PDI COM PROBLEMAS! cont: {}".format(camera_len))
+                print("PDI COM PROBLEMAS! cont: {}".format(camera_distances_array_len))
             lock_camera.release()
 
         if ACTIVE_SENSOR0:
@@ -214,105 +254,100 @@ def get_median_distances_thread(ID, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE_SENSO
                 print("sensor2 COM PROBLEMAS! cont: {}".format(sensor2_len))
             lock_2.release()
         
-        # ---------------
+        # -----------------------------
         # Check Collision
+
         if ((ACTIVE_SENSOR0 and (sensor0_median < AUTOBRAKE_DIST)) or 
             (ACTIVE_SENSOR1 and (sensor1_median < AUTOBRAKE_DIST)) or 
             (ACTIVE_SENSOR2 and (sensor2_median < AUTOBRAKE_DIST)) or
             (ACTIVE__CAMERA and (camera_median < AUTOBRAKE_DIST))):
-            
-            print("AUTOBRAKE")
-            if not __debug__:
-                mutex_GPIO_WRITE.acquire()
-                GPIO.output(GPIO_AUTOBRAKE, True)
-                GPIO.output(GPIO_COLLISION, True)
-                mutex_GPIO_WRITE.release()
+        
+            # A distância é muito pequena! Logo, verifica se o número de ocorrências 
+            # ... foi maior que o limite de alarmes falsos permitidos
+            if (last_states.count(PRECOLLISION_STATE_ID)+last_states.count(AUTOBRAKE_STATE_ID) > COUNT_AUTOBRAKE_FALSE_ALARM):
+                # Altera o estado para autobrake
+                print("AUTOBRAKE!")
+                current_state = AUTOBRAKE_STATE_ID
+                last_states[i] = AUTOBRAKE_STATE_ID
+            else:
+                print("++ QUASE AUTOBRAKE")
+                # Senão salva esse alarme somente como uma possível colisão
+                last_states[i] = PRECOLLISION_STATE_ID
 
         elif ( (ACTIVE_SENSOR0 and (sensor0_median < COLLISION_DIST)) or 
             (ACTIVE_SENSOR1 and (sensor1_median < COLLISION_DIST)) or 
             (ACTIVE_SENSOR2 and (sensor2_median < COLLISION_DIST)) or
             (ACTIVE__CAMERA and (camera_median < COLLISION_DIST))):
             
-            print("COLLISION")
-            if not __debug__:
-                mutex_GPIO_WRITE.acquire()
-                GPIO.output(GPIO_AUTOBRAKE, False)
-                GPIO.output(GPIO_COLLISION, True)
-                mutex_GPIO_WRITE.release()
+            # A distância ainda é segura, mas ficar de olho! Logo, verifica se o número de 
+            # ... ocorrências foi maior que o limite de alarmes falsos permitidos
+            if (last_states.count(PRECOLLISION_STATE_ID) > COUNT_PRECOLLISION_FALSE_ALARM):
+                # Altera o estado para autobrake
+                print("COLLISION!")
+                current_state = PRECOLLISION_STATE_ID
+            else:
+                print("++ QUASE POSSÍVEL COLISÃO")
+
+            # Se realmente é uma possível colisão ou não, salva esse alarme
+            last_states[i] = PRECOLLISION_STATE_ID
+                
         else:
-            print("NORMAL!")
-            if not __debug__:
-                mutex_GPIO_WRITE.acquire()
-                GPIO.output(GPIO_AUTOBRAKE, False)
-                GPIO.output(GPIO_COLLISION, False)
-                mutex_GPIO_WRITE.release()
+            # A distância é segura!! Logo, verifica se o número de ocorrências 
+            # ... foi maior que o limite de alarmes falsos permitidos
+            if (last_states.count(NORMAL_STATE_ID) > COUNT_NORMAL_FALSE_ALARM):
+                # Altera o estado para normal
+                print("NORMAL!")
+                current_state = NORMAL_STATE_ID
+            else:
+                print("++ QUASE TUDO NORMAL")
+            
+            # Se realmente o estado virou normal de fato ou ainda é probabilidade, salva esse alarme
+            last_states[i] = NORMAL_STATE_ID
+
+
+        # Aguarda por um tempo para realizar os cálculos novamente
+        time.sleep(PROCESS_SENSOR_DATA_INTERVAL)
         
-        time.sleep(GET_MEDIAN_INTERVAL)
-        
-        # print("-----------------------")
+        # Envia por serial o estado atual
+        if not __debug__:
+            ser.write(str.encode(str(current_state) + '_'+str(i)))
+
+        # Inrementa ou zera o iterador do array dos últimos estados
+        i = 0 if i>=(EVENTS_ARRAY_SIZE-1) else i+1
 
 if __name__ == '__main__':
-    GPIO.cleanup()
-
-    ACTIVE_SENSOR0 = False
-    if (sys.argv[1] == str(1)):
-        ACTIVE_SENSOR0 = True
-    print ("Status SENSOR0: %s" % (sys.argv[1]))
-    print ("Status SENSOR0 ACTIVE: %s" % ACTIVE_SENSOR0)
-
-    ACTIVE_SENSOR1 = False
-    if (sys.argv[2] == str(1)):
-        ACTIVE_SENSOR1 = True
-    print ("Status SENSOR1: %s" % (sys.argv[2]))
-    print ("Status SENSOR1 ACTIVE: %s" % ACTIVE_SENSOR1)
-
-    ACTIVE_SENSOR2 = False
-    if (sys.argv[3] == str(1)):
-        ACTIVE_SENSOR2 = True
-    print ("Status SENSOR2: %s" % (sys.argv[3]))
-    print ("Status SENSOR2 ACTIVE: %s" % ACTIVE_SENSOR2)
-
-    ACTIVE__CAMERA = False
-    if (sys.argv[4] == str(1)):
-        ACTIVE__CAMERA = True
-    print ("Status CAMERA: %s" % (sys.argv[4]))
-    print ("Status CAMERA ACTIVE: %s" % ACTIVE__CAMERA)
-
     if not __debug__:
+        GPIO.cleanup()
+        #Configuração inicial dos terminais GPIO
+        GPIO.setwarnings(False)
         #GPIO Mode (BOARD / BCM)
         GPIO.setmode(GPIO.BCM)
-        # Set GPIO direction    
-        GPIO.setup(GPIO_COLLISION, GPIO.OUT)
-        GPIO.setup(GPIO_AUTOBRAKE, GPIO.OUT)
+        GPIO.setup(START_LED, GPIO.OUT)
+
+    # Turn on Start Program Indicator LED
+    GPIO.output(START_LED, True)
 
     if ACTIVE_SENSOR0:
         sensor0_thread = threading.Thread(target=sensor_thread, args=(0, GPIO_TRIGGER_0, GPIO_ECHO_0,))
-        # sensor0_thread = Process(target=sensor_thread, args=(0, GPIO_TRIGGER_0, GPIO_ECHO_0,))
         sensor0_thread.start()
-        # sensor0_thread.join()
     
     if ACTIVE_SENSOR1:
         sensor1_thread = threading.Thread(target=sensor_thread, args=(1, GPIO_TRIGGER_1, GPIO_ECHO_1,))
-        # sensor1_thread = Process(target=sensor_thread, args=(1, GPIO_TRIGGER_1, GPIO_ECHO_1,))
         sensor1_thread.start()
-        # sensor1_thread.join()
     
     if ACTIVE_SENSOR2:
         sensor2_thread = threading.Thread(target=sensor_thread, args=(2, GPIO_TRIGGER_2, GPIO_ECHO_2,))
-        # sensor2_thread = Process(target=sensor_thread, args=(2, GPIO_TRIGGER_2, GPIO_ECHO_2,))
         sensor2_thread.start()
-        # sensor2_thread.join()
     
     if ACTIVE__CAMERA:
         image_processing_thread = threading.Thread(target=image_processing_thread, args=(3,))
-        # image_processing_thread = Process(target=image_processing_thread, args=(3,))
         image_processing_thread.start()
-        # image_processing_thread.join()
 
+    # get_speed = threading.Thread(target=get_speed_via_serial_thread, args=(4,))
+    # get_speed.start()
+    
     print ("----------------------------------------------")
     time.sleep(1)
     
-    get_median_distances_thread = threading.Thread(target=get_median_distances_thread, args=(4, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE_SENSOR2, ACTIVE__CAMERA))
-    # get_mean_distances_thread = Process(target=get_mean_distances_thread, args=(4,))
+    get_median_distances_thread = threading.Thread(target=get_median_distances_thread, args=(5, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE_SENSOR2, ACTIVE__CAMERA))
     get_median_distances_thread.start()
-    # get_median_distances_thread.join()
