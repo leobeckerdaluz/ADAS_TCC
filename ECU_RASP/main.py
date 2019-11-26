@@ -16,7 +16,6 @@ if not __debug__:
 
 ACTIVE_SENSOR0 = True
 ACTIVE_SENSOR1 = True
-ACTIVE_SENSOR2 = False
 ACTIVE__CAMERA = False
 
 # Distâncias para alteração de estados
@@ -42,48 +41,44 @@ COUNT_NORMAL_FALSE_ALARM = 2            # Qtde de falsos alarmes permitidos ante
 # SENSORS ENUM
 SENSOR0_ID = 0
 SENSOR1_ID = 1
-SENSOR2_ID = 2
 
 # Lista com os últimos estados
 last_states = [0] * EVENTS_ARRAY_SIZE
 
 # Estado atual do sistema
 current_state = 0
+current_speed = 0
+less_distance = 0
 
-
+# GPIO pins
 START_LED = 18
-
-#set SENSORS Pins
 GPIO_TRIGGER_0 = 23
 GPIO_ECHO_0 = 24
 GPIO_TRIGGER_1 = 4
 GPIO_ECHO_1 = 17
-GPIO_TRIGGER_2 = 27
-GPIO_ECHO_2 = 22
 
 lock_0 = Lock()
 lock_1 = Lock()
-lock_2 = Lock()
 lock_camera = Lock()
 
 sensor0_distances = []
 sensor1_distances = []
-sensor2_distances = []
 camera_distances = []
     
-# def get_speed_via_serial_thread(ID):
-#     while True:
-#         # print("\nDEU CERTO!\n")
-#         line = ser.readline()
-#         print("\n")
+def get_speed_via_serial_thread(ID):
+    global current_speed
+
+    while True:
+        # print("\nDEU CERTO!\n")
+        line = ser.readline()
+        # print("\n")
         
-#         # print(line)
-#         substr = line[2:-1]
-#         current_speed = float(line)
-#         print(current_speed)
+        # print(line)
+        # substr = line[2:-1]
+        current_speed = float(line)
+        # print(current_speed)
         
-#         print("\n")
-#         # time.sleep(1)
+        # print("\n")
 
 def sensor_thread(ID, GPIO_TRIGGER, GPIO_ECHO):
     print(str(ID) + ": Começou a thread! Pins: ->" + str(GPIO_TRIGGER) + " e " + str(GPIO_ECHO))
@@ -105,13 +100,6 @@ def sensor_thread(ID, GPIO_TRIGGER, GPIO_ECHO):
                 sensor1_distances.append(dist)
                 lock_1.release()
                 # print("adicionou 1")
-                time.sleep(0.00001)
-            elif (ID == SENSOR2_ID):
-                dist = random.uniform(15.0, 20.0)
-                # print(str(ID) + " dist: " + str(dist))
-                lock_2.acquire()
-                sensor2_distances.append(dist)
-                lock_2.release()
                 time.sleep(0.00001)
     else:
         #set GPIO direction
@@ -170,11 +158,6 @@ def sensor_thread(ID, GPIO_TRIGGER, GPIO_ECHO):
                 lock_1.acquire()
                 sensor1_distances.append(distance)
                 lock_1.release()
-            elif (ID == SENSOR2_ID):
-                # print(str(ID) + " dist: " + str(dist))
-                lock_2.acquire()
-                sensor2_distances.append(distance)
-                lock_2.release()
 
 def image_processing_thread(ID): 
     print(str(ID) + ": Image Processing")
@@ -194,8 +177,10 @@ def image_processing_thread(ID):
         lock_camera.release()
         time.sleep(0.1)
 
-def get_median_distances_thread(ID, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE_SENSOR2, ACTIVE__CAMERA): 
+def get_median_distances_thread(ID, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE__CAMERA): 
     global current_state
+    global current_speed
+    global less_distance
     print("{}: Processa as distâncias de cada sensor".format(ID))
 
     i = 0
@@ -240,28 +225,15 @@ def get_median_distances_thread(ID, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE_SENSO
                 sensor1_median = 123.44
                 print("sensor1 COM PROBLEMAS! cont: {}".format(sensor1_len))
             lock_1.release()
-        
-        if ACTIVE_SENSOR2:
-            lock_2.acquire()
-            sensor2_len = len(sensor2_distances)
-            if (sensor2_len>0):
-                sensor2_median = statistics.median(sensor2_distances)
-                sensor2_distances.clear()
-                # print("cont sensor2: {}".format(sensor2_len))
-                print("sensor2: {}".format(sensor2_median))
-            else:
-                sensor2_median = 123.44
-                print("sensor2 COM PROBLEMAS! cont: {}".format(sensor2_len))
-            lock_2.release()
-        
+    
+        # -----------------------------
+        # Get the minimum distance
+        less_distance = min(sensor0_median, sensor1_median)
+    
         # -----------------------------
         # Check Collision
-
-        if ((ACTIVE_SENSOR0 and (sensor0_median < AUTOBRAKE_DIST)) or 
-            (ACTIVE_SENSOR1 and (sensor1_median < AUTOBRAKE_DIST)) or 
-            (ACTIVE_SENSOR2 and (sensor2_median < AUTOBRAKE_DIST)) or
-            (ACTIVE__CAMERA and (camera_median < AUTOBRAKE_DIST))):
         
+        if (less_distance < AUTOBRAKE_DIST):
             # A distância é muito pequena! Logo, verifica se o número de ocorrências 
             # ... foi maior que o limite de alarmes falsos permitidos
             if (last_states.count(PRECOLLISION_STATE_ID)+last_states.count(AUTOBRAKE_STATE_ID) > COUNT_AUTOBRAKE_FALSE_ALARM):
@@ -274,10 +246,7 @@ def get_median_distances_thread(ID, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE_SENSO
                 # Senão salva esse alarme somente como uma possível colisão
                 last_states[i] = PRECOLLISION_STATE_ID
 
-        elif ( (ACTIVE_SENSOR0 and (sensor0_median < COLLISION_DIST)) or 
-            (ACTIVE_SENSOR1 and (sensor1_median < COLLISION_DIST)) or 
-            (ACTIVE_SENSOR2 and (sensor2_median < COLLISION_DIST)) or
-            (ACTIVE__CAMERA and (camera_median < COLLISION_DIST))):
+        elif (less_distance < COLLISION_DIST):
             
             # A distância ainda é segura, mas ficar de olho! Logo, verifica se o número de 
             # ... ocorrências foi maior que o limite de alarmes falsos permitidos
@@ -309,6 +278,13 @@ def get_median_distances_thread(ID, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE_SENSO
         time.sleep(PROCESS_SENSOR_DATA_INTERVAL)
         
         # Envia por serial o estado atual
+        print("--------------------")
+        print("--------------------")
+        print("state: " + str(current_state))
+        print("speed: " + str(current_speed))
+        print("distance: " + str(less_distance))
+        print("--------------------")
+        print("--------------------")
         if not __debug__:
             ser.write(str.encode(str(current_state) + '_'+str(i)))
 
@@ -335,19 +311,15 @@ if __name__ == '__main__':
         sensor1_thread = threading.Thread(target=sensor_thread, args=(1, GPIO_TRIGGER_1, GPIO_ECHO_1,))
         sensor1_thread.start()
     
-    if ACTIVE_SENSOR2:
-        sensor2_thread = threading.Thread(target=sensor_thread, args=(2, GPIO_TRIGGER_2, GPIO_ECHO_2,))
-        sensor2_thread.start()
-    
     if ACTIVE__CAMERA:
         image_processing_thread = threading.Thread(target=image_processing_thread, args=(3,))
         image_processing_thread.start()
 
-    # get_speed = threading.Thread(target=get_speed_via_serial_thread, args=(4,))
-    # get_speed.start()
+    get_speed = threading.Thread(target=get_speed_via_serial_thread, args=(4,))
+    get_speed.start()
     
     print ("----------------------------------------------")
     time.sleep(1)
     
-    get_median_distances_thread = threading.Thread(target=get_median_distances_thread, args=(5, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE_SENSOR2, ACTIVE__CAMERA))
+    get_median_distances_thread = threading.Thread(target=get_median_distances_thread, args=(5, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE__CAMERA))
     get_median_distances_thread.start()
