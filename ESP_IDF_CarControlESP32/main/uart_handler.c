@@ -15,6 +15,7 @@
 #include <string.h>
 #include <math.h>
 #include "uart_handler.h"
+#include "encoder_isr.h"
 
 uint8_t current_state = 0;
 
@@ -45,7 +46,7 @@ void init_uart1(void){
     uart_driver_install(UART_NUM_1, BUF_SIZE * 2, 0, 0, NULL, 0);
 }
 
-void send_speed_to_ECU(float avg_speed)
+void send_speed_to_ECU()
 {
     // Converts float to string
     char str[100];
@@ -58,7 +59,7 @@ void send_speed_to_ECU(float avg_speed)
 
     // Print as parts, note that you need 0-padding for fractional bit.
     sprintf(str, "%d.%04d\n", tmpInt1, tmpInt2);
-    printf("\nEnviando Average Speed na Serial: %s    strlen: %d\n", str, strlen(str));
+    printf("\nAvg Speed na Serial: %d   |   %s\n", strlen(str), str);
 
     // Write data to UART.
     // const char* test_str = "This is a test string.\n";

@@ -24,6 +24,7 @@
 
 #include "bt_handler.h"
 
+#include "adas_car.h"
 #include "uart_handler.h"
 #include "mcpwm_brushed_dc_control.h"
 
@@ -92,8 +93,11 @@ void emergency_brake()
     
     brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
     brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
     printf("FREIO LIBERADO!\n");
+
+    gpio_set_level(BUZZER_GPIO, 0);
+    printf("BUZZER DESLIGADO!\n");
 }
 
 void test_emergency_brakes(void){

@@ -15,6 +15,8 @@
 #include "uart_handler.h"
 #include "encoder_isr.h"
 
+float avg_speed = 0;
+
 xQueueHandle encoder_evt_queue = NULL;
 
 uint32_t cont_left_encoder = 0;
@@ -62,8 +64,7 @@ void get_rms_task(void* arg)
     float right_rps = 0;
     float left_speed = 0;
     float right_speed = 0;
-    float avg_speed = 0;
-
+    
     for(;;) {
         // Calcula o RPM
         // left_rps = ((float)DELAY_CALCULATE_RPM / PULSES_PER_REVOLUTION) * cont_left_encoder; 
@@ -72,7 +73,10 @@ void get_rms_task(void* arg)
         right_rps = 1000.0 * cont_right_encoder / DELAY_CALCULATE_RPM / PULSES_PER_REVOLUTION;
         left_speed = left_rps * WHEEL_CIRCUMFERENCE;
         right_speed = right_rps * WHEEL_CIRCUMFERENCE;
-        avg_speed = (left_speed + right_speed)/2;
+        
+        // avg_speed = (left_speed + right_speed)/2;
+        avg_speed = right_speed;
+        
         // printf("LEFT  ENCODER: %d \n", cont_left_encoder);
         // printf("RIGHT ENCODER: %d \n", cont_right_encoder);
         // printf("left  RPM: %f \n", left_rps);

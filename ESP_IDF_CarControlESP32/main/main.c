@@ -37,20 +37,18 @@ void alarms_task(void *pvParameter)
         {
             case 0:
                 gpio_set_level(BUZZER_GPIO, 0);
-                printf("\nBUZZER OFF\n");
                 vTaskDelay(5 / portTICK_PERIOD_MS);   
             break;
             
             case 1:
-                printf("\nFUDEUUUUUUUUUUUUUUUUUUUU\nnBUZZER\n");
-                
+                // printf("\nFUDEUUUUUUUUUUUUUUUUUUUU\nnBUZZER\n");
                 buzzer_status = !buzzer_status;
                 gpio_set_level(BUZZER_GPIO, buzzer_status);
                 vTaskDelay(100 / portTICK_PERIOD_MS);
             break;
 
             case 2:
-                printf("\nBUZZER ON\n");
+                // printf("\nBUZZER ON\n");
                 gpio_set_level(BUZZER_GPIO, 1);
                 vTaskDelay(5 / portTICK_PERIOD_MS);   
             break;
@@ -79,7 +77,7 @@ void app_main(void){
 
     // xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
     xTaskCreate(get_ECU_serial_parameters_TASK, "get_ECU_serial_parameters_TASK", 2048, NULL, 10, NULL);
-    // xTaskCreate(get_rms_task, "encoder_task", 4096, NULL, 10, NULL);
+    xTaskCreate(get_rms_task, "encoder_task", 4096, NULL, 10, NULL);
     xTaskCreate(alarms_task, "alarms_task", 2048, NULL, 10, NULL);
     
 }

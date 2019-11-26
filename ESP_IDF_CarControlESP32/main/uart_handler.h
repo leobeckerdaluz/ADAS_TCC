@@ -10,4 +10,4 @@ extern uint8_t current_state;
 
 void init_uart1();
 void get_ECU_serial_parameters_TASK(void *arg);
-void send_speed_to_ECU(float avg_speed);
+void send_speed_to_ECU();
