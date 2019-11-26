@@ -75,6 +75,8 @@ void app_main(void){
     set_encoder_ISRs();
     init_uart1();
 
+    // test_emergency_brakes();
+
     // xTaskCreate(&blink_task, "blink_task", 1024, NULL, 5, NULL);
     xTaskCreate(get_ECU_serial_parameters_TASK, "get_ECU_serial_parameters_TASK", 2048, NULL, 10, NULL);
     // xTaskCreate(get_rms_task, "encoder_task", 4096, NULL, 10, NULL);

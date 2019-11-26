@@ -16,9 +16,6 @@
 #define MOTOR_RIGHT_FWD_PIN 12//26//27   //Set GPIO 15 as PWM0A
 #define MOTOR_RIGHT_REV_PIN 13//27//14   //Set GPIO 16 as PWM0B
 
-void brushed_motor_stop(mcpwm_unit_t mcpwm_num, mcpwm_timer_t timer_num);
-void brushed_motor_forward(mcpwm_unit_t mcpwm_num, mcpwm_timer_t timer_num , float duty_cycle);
-void brushed_motor_backward(mcpwm_unit_t mcpwm_num, mcpwm_timer_t timer_num , float duty_cycle);
 void mcpwm_example_gpio_initialize(void);
 void mcpwm_motor_control(int8_t x_axis, int8_t y_axis);
-void stop_all_motors();
+void test_emergency_brakes(void);

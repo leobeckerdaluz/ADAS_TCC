@@ -27,6 +27,8 @@
 #include "uart_handler.h"
 #include "mcpwm_brushed_dc_control.h"
 
+
+
 void mcpwm_example_gpio_initialize(void)
 {
     printf("initializing mcpwm gpio...\n");
@@ -78,12 +80,57 @@ void brushed_motor_stop(mcpwm_unit_t mcpwm_num, mcpwm_timer_t timer_num)
     mcpwm_set_signal_low(mcpwm_num, timer_num, MCPWM_OPR_B);
 }
 
-
-void stop_all_motors(){
+void emergency_brake()
+{
     brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
     brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
+    printf("FREIO DE EMERGENCIA ATIVADO!\n");
+    
+    brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, 50);
+    brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, 50);
+    vTaskDelay(150 / portTICK_PERIOD_MS);
+    
+    brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+    brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    printf("FREIO LIBERADO!\n");
 }
 
+void test_emergency_brakes(void){
+    uint8_t teste = 0;
+
+    up:
+
+    printf("Acelerador no máximo!\n");
+    brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, 100);
+    brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, 100);
+    
+    printf("3...\n");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    printf("2...\n");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    printf("1...\n");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    if (teste == 0){
+        teste = 1;
+        goto there;
+    }
+    else{
+        teste = 0;
+        brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+        brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
+        
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        goto up;
+    }
+
+    there:
+    emergency_brake();
+
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    goto up;
+}
 
 /**
  * @brief Configure MCPWM module for brushed dc motor
@@ -91,6 +138,7 @@ void stop_all_motors(){
 void mcpwm_motor_control(int8_t x_axis, int8_t y_axis)
 {
     const int limit = 60;
+    static uint8_t emergency_brake_applied = 0;
     
     // Converte os valores de duty
     float duty_y =  (float)abs(y_axis);
@@ -108,13 +156,21 @@ void mcpwm_motor_control(int8_t x_axis, int8_t y_axis)
         }
         else
         {
-            brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
-            brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
-            printf("PAROU\n");
+            if (emergency_brake_applied == 0){
+                emergency_brake();
+                emergency_brake_applied = 1;
+            }
+            else{
+                brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+                brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
+                printf("PAROU\n");
+            }
         }
     }
     else
     {
+        emergency_brake_applied = 0;
+
         if (x_axis > limit){
             brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_x);
             brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_x/3);
