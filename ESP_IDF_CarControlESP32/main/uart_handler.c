@@ -16,6 +16,7 @@
 #include <math.h>
 #include "uart_handler.h"
 #include "encoder_isr.h"
+#include "mcpwm_brushed_dc_control.h"
 
 uint8_t current_state = 0;
 
@@ -70,6 +71,7 @@ void get_ECU_serial_parameters_TASK(void *arg)
 {
     // Configure a temporary buffer for the incoming data
     uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
+    uint8_t last_state = 0;
 
     while (1) {
         // Read data from the UART
@@ -78,7 +80,17 @@ void get_ECU_serial_parameters_TASK(void *arg)
         // uart_write_bytes(UART_NUM_1, (const char *) data, len);
         
         if (len>0){
+            // Atualiza o último estado
+            last_state = current_state;
+
+            // Atualiza o estado atual
             current_state = data[0]-48;
+
+            // Se o estado alterou desde a última vez e é frenagem...
+            if ((current_state != last_state) && (current_state == 2)){
+                // Executa o freio de emergência
+                emergency_brake();
+            }
 
             printf("Chegou! Len: %d\n", len);
             printf("data: %d %d\n", current_state, data[2]-48);

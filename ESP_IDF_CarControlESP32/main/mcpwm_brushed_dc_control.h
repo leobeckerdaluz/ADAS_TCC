@@ -19,3 +19,4 @@
 void mcpwm_example_gpio_initialize(void);
 void mcpwm_motor_control(int8_t x_axis, int8_t y_axis);
 void test_emergency_brakes(void);
+void emergency_brake();

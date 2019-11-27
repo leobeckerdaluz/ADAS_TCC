@@ -44,18 +44,7 @@ void alarms_task(void *pvParameter)
                 // printf("\nFUDEUUUUUUUUUUUUUUUUUUUU\nnBUZZER\n");
                 buzzer_status = !buzzer_status;
                 gpio_set_level(BUZZER_GPIO, buzzer_status);
-                vTaskDelay(100 / portTICK_PERIOD_MS);
-            break;
-
-            case 2:
-                // printf("\nBUZZER ON\n");
-                gpio_set_level(BUZZER_GPIO, 1);
-                vTaskDelay(5 / portTICK_PERIOD_MS);   
-            break;
-        
-            default:
-                gpio_set_level(BUZZER_GPIO, 0);
-                vTaskDelay(5 / portTICK_PERIOD_MS);   
+                vTaskDelay(80 / portTICK_PERIOD_MS);
             break;
         }
     }

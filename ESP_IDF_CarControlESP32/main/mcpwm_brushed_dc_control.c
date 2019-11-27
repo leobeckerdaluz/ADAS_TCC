@@ -83,21 +83,22 @@ void brushed_motor_stop(mcpwm_unit_t mcpwm_num, mcpwm_timer_t timer_num)
 
 void emergency_brake()
 {
+    printf("FREIO DE EMERGENCIA ATIVADO e BUZZER ATIVADO!\n");
+    gpio_set_level(BUZZER_GPIO, 1);
+
     brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
     brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
-    printf("FREIO DE EMERGENCIA ATIVADO!\n");
     
     brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, 50);
     brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, 50);
-    vTaskDelay(150 / portTICK_PERIOD_MS);
+    vTaskDelay(120 / portTICK_PERIOD_MS);
     
     brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
     brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    printf("FREIO LIBERADO!\n");
+    vTaskDelay(880 / portTICK_PERIOD_MS);
 
     gpio_set_level(BUZZER_GPIO, 0);
-    printf("BUZZER DESLIGADO!\n");
+    printf("FREIO LIBERADO e BUZZER DESLIGADO!\n");
 }
 
 void test_emergency_brakes(void){
@@ -142,7 +143,6 @@ void test_emergency_brakes(void){
 void mcpwm_motor_control(int8_t x_axis, int8_t y_axis)
 {
     const int limit = 60;
-    static uint8_t emergency_brake_applied = 0;
     
     // Converte os valores de duty
     float duty_y =  (float)abs(y_axis);
@@ -160,21 +160,13 @@ void mcpwm_motor_control(int8_t x_axis, int8_t y_axis)
         }
         else
         {
-            if (emergency_brake_applied == 0){
-                emergency_brake();
-                emergency_brake_applied = 1;
-            }
-            else{
-                brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
-                brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
-                printf("PAROU\n");
-            }
+            brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
+            brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
+            printf("PAROU\n");
         }
     }
     else
     {
-        emergency_brake_applied = 0;
-
         if (x_axis > limit){
             brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_x);
             brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_x/3);
