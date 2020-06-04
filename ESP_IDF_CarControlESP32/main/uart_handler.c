@@ -92,9 +92,9 @@ void get_ECU_serial_parameters_TASK(void *arg)
                 emergency_brake();
             }
 
-            printf("Chegou! Len: %d\n", len);
-            printf("data: %d %d\n", current_state, data[2]-48);
-            printf("current_state: %d\n", current_state);
+            // printf("Chegou! Len: %d\n", len);
+            // printf("data: %d %d\n", current_state, data[2]-48);
+            // printf("current_state: %d\n", current_state);
         }
     }
 }

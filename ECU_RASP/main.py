@@ -18,14 +18,32 @@ ACTIVE_SENSOR0 = True
 ACTIVE_SENSOR1 = True
 ACTIVE__CAMERA = False
 
+# # Distâncias para alteração de estados
+# AUTOBRAKE_DIST_STAGE_1 = 8.0    #cm
+# COLLISION_DIST_STATE_1 = 15.0   #cm
+# AUTOBRAKE_DIST_STAGE_2 = 12.0   #cm
+# COLLISION_DIST_STATE_2 = 20.0   #cm
+# AUTOBRAKE_DIST_STAGE_3 = 16.0   #cm
+# COLLISION_DIST_STATE_3 = 25.0   #cm
 # Distâncias para alteração de estados
-AUTOBRAKE_DIST = 15.0 #cm
-COLLISION_DIST = 22.0 #cm
+AUTOBRAKE_DIST_STAGE_1 = 16.0    #cm
+COLLISION_DIST_STATE_1 = 25.0   #cm
+AUTOBRAKE_DIST_STAGE_2 = 16.0   #cm
+COLLISION_DIST_STATE_2 = 25.0   #cm
+AUTOBRAKE_DIST_STAGE_3 = 16.0   #cm
+COLLISION_DIST_STATE_3 = 25.0   #cm
+
+LESS_THAN_VALUE_STAGE_1 = 5
+LESS_THAN_VALUE_STAGE_2 = 25
+LESS_THAN_VALUE_STAGE_3 = 80
+
+AUTOBRAKE_DIST = 16.0 #cm
+COLLISION_DIST = 25.0 #cm
 
 # Constantes de amostra
 SENSOR_READ_INTERVAL = 0.00002 #s
 LEAVE_SAMPLE_INTERVAL = 0.01 #s
-PROCESS_SENSOR_DATA_INTERVAL = 0.1 #s
+PROCESS_SENSOR_DATA_INTERVAL = 0.05 #s
 
 # ID de cada estado
 AUTOBRAKE_STATE_ID = 2
@@ -33,10 +51,10 @@ PRECOLLISION_STATE_ID = 1
 NORMAL_STATE_ID = 0
 
 # Eventos para considerar de fato a mudança de estado
-EVENTS_ARRAY_SIZE = 10                  # Tamanho do vetor que armazena os últimos estados
-COUNT_AUTOBRAKE_FALSE_ALARM = 3         # Qtde de falsos alarmes permitidos antes de mudar para Autobrake
-COUNT_PRECOLLISION_FALSE_ALARM = 2      # Qtde de falsos alarmes permitidos antes de mudar para Collision
-COUNT_NORMAL_FALSE_ALARM = 2            # Qtde de falsos alarmes permitidos antes de mudar de volta para Normal
+EVENTS_ARRAY_SIZE = 20                  # Tamanho do vetor que armazena os últimos estados
+COUNT_AUTOBRAKE_FALSE_ALARM = 6         # Qtde de falsos alarmes permitidos antes de mudar para Autobrake
+COUNT_PRECOLLISION_FALSE_ALARM = 4      # Qtde de falsos alarmes permitidos antes de mudar para Collision
+COUNT_NORMAL_FALSE_ALARM = 4            # Qtde de falsos alarmes permitidos antes de mudar de volta para Normal
 
 # SENSORS ENUM
 SENSOR0_ID = 0
@@ -228,10 +246,24 @@ def get_median_distances_thread(ID, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE__CAME
     
         # -----------------------------
         # Get the minimum distance
+        
         less_distance = min(sensor0_median, sensor1_median)
+
+        # -----------------------------
+        # Set limits based on speed
+
+        if (current_speed < LESS_THAN_VALUE_STAGE_1):
+            AUTOBRAKE_DIST = AUTOBRAKE_DIST_STAGE_1
+            COLLISION_DIST = COLLISION_DIST_STATE_1
+        elif (current_speed < LESS_THAN_VALUE_STAGE_2):
+            AUTOBRAKE_DIST = AUTOBRAKE_DIST_STAGE_2
+            COLLISION_DIST = COLLISION_DIST_STATE_2
+        elif (current_speed < LESS_THAN_VALUE_STAGE_3):
+            AUTOBRAKE_DIST = AUTOBRAKE_DIST_STAGE_3
+            COLLISION_DIST = COLLISION_DIST_STATE_3
     
         # -----------------------------
-        # Check Collision
+        # Calculate Collision
         
         if (less_distance < AUTOBRAKE_DIST):
             # A distância é muito pequena! Logo, verifica se o número de ocorrências 
@@ -273,21 +305,20 @@ def get_median_distances_thread(ID, ACTIVE_SENSOR0, ACTIVE_SENSOR1, ACTIVE__CAME
             # Se realmente o estado virou normal de fato ou ainda é probabilidade, salva esse alarme
             last_states[i] = NORMAL_STATE_ID
 
+        # Envia por serial o estado atual
+        # print("--------------------")
+        # print("--------------------")
+        # print("state: " + str(current_state))
+        # print("speed: " + str(current_speed))
+        # print("distance: " + str(less_distance))
+        # print("--------------------")
+        # print("--------------------")
+        if not __debug__:
+            ser.write(str.encode(str(current_state) + '_'+str(i)))
 
         # Aguarda por um tempo para realizar os cálculos novamente
         time.sleep(PROCESS_SENSOR_DATA_INTERVAL)
         
-        # Envia por serial o estado atual
-        print("--------------------")
-        print("--------------------")
-        print("state: " + str(current_state))
-        print("speed: " + str(current_speed))
-        print("distance: " + str(less_distance))
-        print("--------------------")
-        print("--------------------")
-        if not __debug__:
-            ser.write(str.encode(str(current_state) + '_'+str(i)))
-
         # Inrementa ou zera o iterador do array dos últimos estados
         i = 0 if i>=(EVENTS_ARRAY_SIZE-1) else i+1
 

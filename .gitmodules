@@ -1,0 +1,3 @@
+[submodule "ECU_RASP/tflite1"]
+    path = ECU_RASP/tflite1
+    url = https://github.com/leobeckerdaluz/TensorFlow-Lite-Object-Detection-on-Android-and-Raspberry-Pi.git

@@ -156,13 +156,11 @@ void mcpwm_motor_control(int8_t x_axis, int8_t y_axis)
         if (y_axis < -limit){
             brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_y);
             brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_y);
-            printf("Indo pra trás por %f\n", duty_y);
         }
         else
         {
             brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
             brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
-            printf("PAROU\n");
         }
     }
     else
@@ -170,31 +168,26 @@ void mcpwm_motor_control(int8_t x_axis, int8_t y_axis)
         if (x_axis > limit){
             brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_x);
             brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_x/3);
-            printf("Indo pra direita por %f\n", duty_x);
         }
         else if (x_axis < -limit)
         {
             brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_x/3);
             brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_x);
-            printf("Indo pra esquerda por %f\n", duty_x);
         }
         else if (y_axis > limit)
         {
             brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_y);
             brushed_motor_forward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_y);
-            printf("Indo pra frente por %f\n", duty_y);
         }
         else if (y_axis < -limit)
         {
             brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_0, duty_y);
             brushed_motor_backward(MCPWM_UNIT_0, MCPWM_TIMER_1, duty_y);
-            printf("Indo pra trás por %f\n", duty_y);
         }
         else
         {
             brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_0);
             brushed_motor_stop(MCPWM_UNIT_0, MCPWM_TIMER_1);
-            printf("PAROU\n");
         }
     }
 }

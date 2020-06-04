@@ -38,7 +38,7 @@ void set_encoder_ISRs(void)
     gpio_config_t io_conf;
     
     //interrupt of rising edge
-    io_conf.intr_type = GPIO_PIN_INTR_NEGEDGE;
+    io_conf.intr_type = GPIO_PIN_INTR_ANYEDGE;
     //bit mask of the pins, use GPIO4/5 here
     io_conf.pin_bit_mask = ((1ULL<<GPIO_INPUT_LEFT_ENCODER) | (1ULL<<GPIO_INPUT_RIGHT_ENCODER));
     //set as input mode    
@@ -64,8 +64,19 @@ void get_rms_task(void* arg)
     float right_rps = 0;
     float left_speed = 0;
     float right_speed = 0;
-    
+
+    uint32_t start_time = 0;
+
+
     for(;;) {
+        start_time = get ;;;;;;;
+        while (gpio_get_level(GPIO_INPUT_LEFT_ENCODER) == 0) || ({
+        }
+        while ((gpio_get_level(GPIO_INPUT_LEFT_ENCODER) == 1)){
+            finish_time
+        }
+
+    
         // Calcula o RPM
         // left_rps = ((float)DELAY_CALCULATE_RPM / PULSES_PER_REVOLUTION) * cont_left_encoder; 
         // left_rps = (float)(cont_left_encoder / PULSES_PER_REVOLUTION) * DELAY_CALCULATE_RPM; 
@@ -87,6 +98,7 @@ void get_rms_task(void* arg)
         // printf("-----------------\n");
 
         send_speed_to_ECU(avg_speed);
+        printf("cont: %d \n", cont_right_encoder);
         
         cont_left_encoder = 0;
         cont_right_encoder = 0;
